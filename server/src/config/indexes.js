@@ -46,4 +46,10 @@ module.exports = [
     key: { storyId: 1, chapterId: 1, versionNumber: -1 },
     options: { unique: true },
   },
+
+  // engagement (Phase 3)
+  // one save per user per poem — backs the idempotent toggle
+  { collection: 'saves', key: { userId: 1, poemId: 1 }, options: { unique: true } },
+  // comment thread page (top-level) + reply batch share this compound
+  { collection: 'comments', key: { targetType: 1, targetId: 1, parentCommentId: 1, createdAt: 1 } },
 ];

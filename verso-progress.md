@@ -5,8 +5,8 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 2B complete — STOPPED for user review (Phase 3 next); repo pushed to Xantonozar/verso
-**Last updated:** 2026-09-26
+**Current status:** Phase 3 complete — STOPPED for user review (Phase 4: Diary next); server + mobile pushed to Xantonozar/verso
+**Last updated:** 2026-09-27
 
 ---
 
@@ -105,13 +105,13 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 3 — Engagement
 
-- [ ] 3.1 Reaction, FeltGoodRating, Comment, Save models + endpoints + validation (enum, 0–100 server-side)
-- [ ] 3.2 Denormalized stat counters via atomic `$inc`
-- [ ] 3.3 Unique-index constraints → clean 409s + PATCH update path
-- [ ] 3.4 Mobile: reaction picker (optimistic + rollback), Felt Good slider, comment thread (nested, paginated), save toggle
-- [ ] 3.5 Tests: toggle idempotency, out-of-range rejected, comment on removed poem rejected
+- [x] 3.1 Reaction, FeltGoodRating, Comment, Save models + endpoints + validation (enum, 0–100 server-side) — engagement module (9 files), 7 reaction types, 2-level comments, score REQUIRED 0–100 int, error codes `ALREADY_REACTED/ALREADY_RATED/FELT_GOOD_NOT_RATED/REPLY_DEPTH/TARGET_NOT_FOUND`
+- [x] 3.2 Denormalized stat counters via atomic `$inc` — only mutation path `poemRepo.incStats` (`$inc` only), grep-verified for reaction/comment/save counters
+- [x] 3.3 Unique-index constraints → clean 409s + PATCH update path — reaction/save idempotent 200, felt-good POST 409 + PATCH update (404 when never rated); comment content 1–500, soft-delete, batched replies
+- [x] 3.4 Mobile: reaction picker (optimistic + rollback), Felt Good slider, comment thread (nested, paginated), save toggle — `components/engage/*` + reader BFF rewrite (`GET /mobile/poems/:id`) + poem publish/unpublish in edit screen; mobile gates 77/77 tests, `tsc --noEmit` 0, `expo lint` 0
+- [x] 3.5 Tests: toggle idempotency, out-of-range rejected, comment on removed poem rejected — server 312/312 (engagement suite 58, lint 0); mobile 16 engagement tests incl. optimistic/rollback, debounce single-PATCH, pagination/reply/delete, publish lifecycle
 
-**Phase 3 gate:** 3.5 green; counters grep-verified `$inc`-only.
+**Phase 3 gate:** ✅ 3.5 green (server 312/312, mobile 77/77); counters grep-verified `$inc`-only.
 
 ---
 
@@ -293,3 +293,4 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 | 2026-09-26 | Phase 1 (incl. remote push) | awaiting review |
 | 2026-09-26 | Phase 2 (incl. remote push) | awaiting review |
 | 2026-09-26 | Phase 2B (incl. remote push) | awaiting review |
+| 2026-09-27 | Phase 3 (incl. remote push) | awaiting review |

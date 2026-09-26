@@ -6,7 +6,10 @@ import { Button } from '../../../../components/Button';
 import { ErrorState } from '../../../../components/ErrorState';
 import { LoadingState } from '../../../../components/LoadingState';
 import { PoemEditor } from '../../../../components/PoemEditor';
+import { ApiError } from '../../../../lib/api/client';
+import { publishPoem, unpublishPoem } from '../../../../lib/api/engagement';
 import { getPoem, Poem } from '../../../../lib/api/poems';
+import { toast } from '../../../../lib/toast';
 import { colors, layout, radii, spacing, typography } from '../../../../theme/tokens';
 
 export default function EditPoemScreen() {
@@ -14,6 +17,7 @@ export default function EditPoemScreen() {
   const [poem, setPoem] = useState<Poem | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   const fetchPoem = useCallback(async (): Promise<Poem> => getPoem(id), [id]);
 
@@ -46,6 +50,38 @@ export default function EditPoemScreen() {
     }
   }, [fetchPoem]);
 
+  const publish = async () => {
+    if (!poem || publishing) return;
+    setPublishing(true);
+    try {
+      setPoem(await publishPoem(poem.id));
+      toast.success('Poem published');
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'VALIDATION_ERROR') {
+        const details = err.details;
+        const first = Array.isArray(details) ? (details[0] as { message?: string }) : undefined;
+        toast.error(first?.message ?? 'Poem cannot be published');
+      } else {
+        toast.error(err instanceof Error && err.message ? err.message : 'Could not publish');
+      }
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const unpublish = async () => {
+    if (!poem || publishing) return;
+    setPublishing(true);
+    try {
+      setPoem(await unpublishPoem(poem.id));
+      toast.success('Poem moved back to draft');
+    } catch (err) {
+      toast.error(err instanceof Error && err.message ? err.message : 'Could not unpublish');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   if (loading) return <LoadingState label="Loading poem..." />;
   if (loadFailed || !poem) {
     return (
@@ -64,11 +100,33 @@ export default function EditPoemScreen() {
         <Button label="Back" variant="secondary" onPress={() => router.back()} testID="editor-back" />
         <View style={styles.headerRow}>
           <Text style={styles.heading}>Edit poem</Text>
-          {poem.status === 'draft' ? (
-            <View style={styles.badge} testID="draft-badge">
-              <Text style={styles.badgeText}>Draft</Text>
-            </View>
-          ) : null}
+          <View style={styles.headerRight}>
+            {poem.status === 'draft' ? (
+              <View style={styles.badge} testID="draft-badge">
+                <Text style={styles.badgeText}>Draft</Text>
+              </View>
+            ) : poem.status === 'published' ? (
+              <View style={styles.badge} testID="published-badge">
+                <Text style={styles.badgeText}>Published</Text>
+              </View>
+            ) : null}
+            {poem.status === 'draft' ? (
+              <Button
+                label="Publish"
+                onPress={() => void publish()}
+                loading={publishing}
+                testID="poem-publish"
+              />
+            ) : poem.status === 'published' ? (
+              <Button
+                label="Unpublish"
+                variant="secondary"
+                onPress={() => void unpublish()}
+                loading={publishing}
+                testID="poem-unpublish"
+              />
+            ) : null}
+          </View>
         </View>
         <PoemEditor poem={poem} onCreated={() => undefined} onSaved={setPoem} />
       </ScrollView>
@@ -94,6 +152,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
   },
   heading: {
     ...typography.title,

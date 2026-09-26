@@ -32,4 +32,12 @@ const autosave = asyncHandler(async (req, res) => {
   ok(res, await poemService.autosaveDraft(req.params.id, req.user, req.body));
 });
 
-module.exports = { create, get, update, remove, versions, autosave };
+const publish = asyncHandler(async (req, res) => {
+  ok(res, await poemService.publishPoem(req.params.id, req.user));
+});
+
+const unpublish = asyncHandler(async (req, res) => {
+  ok(res, await poemService.unpublishPoem(req.params.id, req.user));
+});
+
+module.exports = { create, get, update, remove, versions, autosave, publish, unpublish };

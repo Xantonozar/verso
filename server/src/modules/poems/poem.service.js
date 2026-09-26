@@ -1,6 +1,6 @@
 'use strict';
 
-const { NotFoundError, ConflictError } = require('../../errors');
+const { NotFoundError, ConflictError, ValidationError } = require('../../errors');
 const { assertOwner, assertOwnerOrModerator, isModerator } = require('../../middleware/authz');
 const { logger } = require('../../config/logger');
 const { User } = require('../users/user.model');
@@ -228,6 +228,56 @@ async function autosaveDraft(poemId, user, patch) {
   return { id: poemId, changed: true, title, content, savedAt };
 }
 
+/**
+ * Publish lifecycle (deferred from Phase 2 by user decision, plan step 45 era):
+ * mirrors the story rule — clean 409s both directions, never publish empty
+ * content, and a `private_draft` visibility would be incoherent once published,
+ * so it promotes to `public`. `publishedAt` pins the first publish only.
+ */
+async function publishPoem(poemId, user) {
+  const poem = await poemRepo.findById(poemId, {
+    select: 'authorId status title content visibility publishedAt',
+  });
+  if (!poem || poem.status === 'removed') throw notFound();
+  assertOwnerOrModerator(poem, user);
+
+  if (poem.status === 'published') {
+    throw new ConflictError('Poem is already published', { code: 'ALREADY_PUBLISHED' });
+  }
+
+  const details = [];
+  if (!poem.title || !poem.title.trim()) {
+    details.push({ field: 'title', message: 'title cannot be empty', code: 'custom' });
+  }
+  if (!poem.content || !poem.content.trim()) {
+    details.push({ field: 'content', message: 'content cannot be empty', code: 'custom' });
+  }
+  if (details.length > 0) {
+    throw new ValidationError('Poem cannot be published', { details });
+  }
+
+  const fields = { status: 'published', publishedAt: poem.publishedAt || new Date() };
+  if (poem.visibility === 'private_draft') fields.visibility = 'public';
+
+  const updated = await poemRepo.updatePoem(poem._id, fields);
+  logger.info({ poemId: String(poem._id), userId: user.id }, 'poem published');
+  return serialize(updated);
+}
+
+async function unpublishPoem(poemId, user) {
+  const poem = await poemRepo.findById(poemId, { select: 'authorId status' });
+  if (!poem || poem.status === 'removed') throw notFound();
+  assertOwnerOrModerator(poem, user);
+
+  if (poem.status !== 'published') {
+    throw new ConflictError('Poem is not published', { code: 'NOT_PUBLISHED' });
+  }
+
+  const updated = await poemRepo.updatePoem(poem._id, { status: 'draft' });
+  logger.info({ poemId: String(poem._id), userId: user.id }, 'poem unpublished');
+  return serialize(updated);
+}
+
 module.exports = {
   createPoem,
   getPoem,
@@ -235,4 +285,7 @@ module.exports = {
   deletePoem,
   listVersions,
   autosaveDraft,
+  publishPoem,
+  unpublishPoem,
+  canView, // shared with engagement (Phase 3) — one visibility matrix, no copies
 };

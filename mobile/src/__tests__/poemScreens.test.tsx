@@ -30,6 +30,17 @@ jest.mock('../lib/api/client', () => {
   };
 });
 
+// The reader now loads through GET /mobile/poems/:id (Phase 3); the comment
+// thread's own GET /comments must not pollute api.get call assertions here.
+jest.mock('../lib/api/engagement', () => {
+  const actual = jest.requireActual('../lib/api/engagement');
+  return {
+    __esModule: true,
+    ...actual,
+    listComments: jest.fn().mockResolvedValue({ items: [], nextCursor: null }),
+  };
+});
+
 jest.mock('../context/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
   useAuth: () => ({
@@ -129,6 +140,16 @@ const poemFixture: Poem = {
   updatedAt: '2026-09-01T10:00:00.000Z',
   author: { id: 'u1', username: 'author', displayName: 'Author Name' },
 };
+
+/** GET /mobile/poems/:id envelope (Phase 3) — reader tests resolve this. */
+function bffFixture(poem: Poem) {
+  return {
+    poem,
+    reactionCounts: {},
+    feltGood: { average: null, count: 0 },
+    viewer: null,
+  };
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -356,7 +377,7 @@ describe('poem reader — states', () => {
     expect(screen.getByTestId('poem-skeleton')).toBeTruthy();
 
     await act(async () => {
-      resolveGet({ data: poemFixture });
+      resolveGet({ data: bffFixture(poemFixture) });
     });
 
     expect(await screen.findByText('First light')).toBeTruthy();
@@ -376,7 +397,7 @@ describe('poem reader — states', () => {
   it('offers retry on network failure and recovers', async () => {
     apiMock.get
       .mockRejectedValueOnce(new ApiError('Network error - check your connection', 0, 'NETWORK'))
-      .mockResolvedValueOnce({ data: poemFixture });
+      .mockResolvedValueOnce({ data: bffFixture(poemFixture) });
 
     await render(<PoemReaderScreen />);
     expect(await screen.findByText("Couldn't load this poem.")).toBeTruthy();
@@ -387,7 +408,7 @@ describe('poem reader — states', () => {
   });
 
   it('shows the edit button for the owner of a draft', async () => {
-    apiMock.get.mockResolvedValue({ data: poemFixture });
+    apiMock.get.mockResolvedValue({ data: bffFixture(poemFixture) });
 
     await render(<PoemReaderScreen />);
     expect(await screen.findByTestId('edit-poem')).toBeTruthy();
@@ -399,7 +420,7 @@ describe('poem reader — states', () => {
 
   it('hides author identity for anonymous poems', async () => {
     apiMock.get.mockResolvedValue({
-      data: { ...poemFixture, anonymous: true, author: null, authorId: undefined },
+      data: bffFixture({ ...poemFixture, anonymous: true, author: null, authorId: undefined }),
     });
 
     await render(<PoemReaderScreen />);

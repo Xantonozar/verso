@@ -3,10 +3,14 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../../components/Button';
+import { CommentThread } from '../../../components/engage/CommentThread';
+import { FeltGoodCard } from '../../../components/engage/FeltGoodCard';
+import { ReactionBar } from '../../../components/engage/ReactionBar';
+import { SaveButton } from '../../../components/engage/SaveButton';
 import { ErrorState } from '../../../components/ErrorState';
 import { useAuth } from '../../../context/AuthContext';
 import { ApiError } from '../../../lib/api/client';
-import { getPoem, Poem } from '../../../lib/api/poems';
+import { getMobilePoem, MobilePoemResponse } from '../../../lib/api/engagement';
 import { colors, layout, radii, spacing, typography } from '../../../theme/tokens';
 
 type LoadState = 'loading' | 'ready' | 'gone' | 'error';
@@ -36,17 +40,17 @@ function PoemSkeleton() {
 export default function PoemReaderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const [poem, setPoem] = useState<Poem | null>(null);
+  const [mobile, setMobile] = useState<MobilePoemResponse | null>(null);
   const [state, setState] = useState<LoadState>('loading');
 
-  const fetchPoem = useCallback(async (): Promise<Poem> => getPoem(id), [id]);
+  const fetchPoem = useCallback(async (): Promise<MobilePoemResponse> => getMobilePoem(id), [id]);
 
   useEffect(() => {
     let cancelled = false;
     fetchPoem()
       .then((data) => {
         if (!cancelled) {
-          setPoem(data);
+          setMobile(data);
           setState('ready');
         }
       })
@@ -65,7 +69,7 @@ export default function PoemReaderScreen() {
   const reload = useCallback(async () => {
     setState('loading');
     try {
-      setPoem(await fetchPoem());
+      setMobile(await fetchPoem());
       setState('ready');
     } catch (err) {
       setState(
@@ -96,7 +100,7 @@ export default function PoemReaderScreen() {
     );
   }
 
-  if (state === 'error' || !poem) {
+  if (state === 'error' || !mobile) {
     return (
       <SafeAreaView style={styles.container}>
         <ScrollView contentContainerStyle={styles.content}>
@@ -107,7 +111,10 @@ export default function PoemReaderScreen() {
     );
   }
 
+  const poem = mobile.poem;
+  const viewer = mobile.viewer;
   const isOwner = !!user && poem.authorId === user.id;
+  const interactive = viewer !== null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -157,6 +164,34 @@ export default function PoemReaderScreen() {
             </Text>
           </View>
         ) : null}
+
+        <View style={styles.engagement} testID="reader-engagement">
+          <ReactionBar
+            poemId={poem.id}
+            counts={mobile.reactionCounts}
+            active={viewer?.reactions ?? []}
+            interactive={interactive}
+          />
+          <FeltGoodCard
+            poemId={poem.id}
+            summary={mobile.feltGood}
+            initialScore={viewer?.feltGood?.score ?? null}
+            interactive={interactive}
+          />
+          {viewer ? (
+            <SaveButton
+              poemId={poem.id}
+              initialSaved={viewer.saved}
+              initialCount={poem.stats?.saveCount ?? 0}
+            />
+          ) : null}
+          <CommentThread
+            poemId={poem.id}
+            interactive={interactive}
+            currentUserId={viewer ? user?.id : undefined}
+            commentCount={poem.stats?.commentCount ?? 0}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -222,6 +257,12 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.inkSecondary,
     fontStyle: 'italic',
+  },
+  engagement: {
+    gap: spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.xl,
   },
   skeleton: {
     gap: spacing.md,

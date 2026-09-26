@@ -127,17 +127,26 @@ describe('createRateLimiter', () => {
 
 describe('app-level /auth limiter (§7.3: 30 req/min)', () => {
   test('31st auth request from one IP is rejected', async () => {
-    const app = createApp();
-    for (let i = 0; i < 30; i++) {
-      const res = await request(app).post('/api/v1/auth/login').send({});
-      expect(res.status).not.toBe(429);
-    }
-    const blocked = await request(app).post('/api/v1/auth/login').send({});
-    expect(blocked.status).toBe(429);
-    expect(blocked.body.error.code).toBe('RATE_LIMITED');
+    // setup.js raises AUTH_RATE_LIMIT_MAX suite-wide (integration suites
+    // register dozens of users/min); pin the §7.3 default here explicitly.
+    const prev = process.env.AUTH_RATE_LIMIT_MAX;
+    process.env.AUTH_RATE_LIMIT_MAX = '30';
+    try {
+      const app = createApp();
+      for (let i = 0; i < 30; i++) {
+        const res = await request(app).post('/api/v1/auth/login').send({});
+        expect(res.status).not.toBe(429);
+      }
+      const blocked = await request(app).post('/api/v1/auth/login').send({});
+      expect(blocked.status).toBe(429);
+      expect(blocked.body.error.code).toBe('RATE_LIMITED');
 
-    // Non-auth routes are unaffected
-    const health = await request(app).get('/health');
-    expect(health.status).toBe(200);
+      // Non-auth routes are unaffected
+      const health = await request(app).get('/health');
+      expect(health.status).toBe(200);
+    } finally {
+      if (prev === undefined) delete process.env.AUTH_RATE_LIMIT_MAX;
+      else process.env.AUTH_RATE_LIMIT_MAX = prev;
+    }
   }, 20_000);
 });

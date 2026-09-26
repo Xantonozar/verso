@@ -42,18 +42,27 @@ function createApp() {
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true }));
 
-  // Brute-force protection on every auth endpoint (§7.3, Phase 0.5 step 21)
-  app.use(`${API_PREFIX}/auth`, createAuthRateLimiter());
+  // Brute-force protection on every auth endpoint (§7.3, Phase 0.5 step 21).
+  // AUTH_RATE_LIMIT_MAX is a test/ops knob — default stays 30/min (§7.3);
+  // integration suites register far more than 30 users per minute.
+  app.use(
+    `${API_PREFIX}/auth`,
+    createAuthRateLimiter({ max: Number(process.env.AUTH_RATE_LIMIT_MAX) || 30 }),
+  );
 
   // Feature modules (§2: routes → controller → service → repository → model)
   const { authRouter } = require('./modules/auth/auth.routes');
   const { userRouter } = require('./modules/users/user.routes');
   const { poemRouter } = require('./modules/poems/poem.routes');
   const { storyRouter } = require('./modules/stories/story.routes');
+  const { engagementRouter } = require('./modules/engagement/engagement.routes');
   app.use(`${API_PREFIX}/auth`, authRouter);
   app.use(`${API_PREFIX}/users`, userRouter);
   app.use(`${API_PREFIX}/poems`, poemRouter);
   app.use(`${API_PREFIX}/stories`, storyRouter);
+  // Engagement (Phase 3): /poems/:id/reactions|felt-good|save, /comments, and
+  // the /mobile BFF — full paths from API_PREFIX, mounted after poemRouter
+  app.use(`${API_PREFIX}`, engagementRouter);
 
   // Health probe (load balancer / deploy checks)
   app.get('/health', (req, res) => {

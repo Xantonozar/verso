@@ -46,5 +46,8 @@ router.put(
   validate({ params: idParamSchema, body: autosaveDraftSchema }),
   controller.autosave,
 );
+// publish lifecycle — deferred from Phase 2 (user decision), mirrors stories
+router.post('/:id/publish', requireAuth, loadUser, validate({ params: idParamSchema }), controller.publish);
+router.delete('/:id/publish', requireAuth, loadUser, validate({ params: idParamSchema }), controller.unpublish);
 
 module.exports = { poemRouter: router };

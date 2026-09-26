@@ -25,6 +25,20 @@ async function softRemove(id) {
   return Poem.findByIdAndUpdate(id, { $set: { status: 'removed' } }, { new: true });
 }
 
+/**
+ * Atomic stats counter movement (plan step 46 / §8.19). The ONLY way counters
+ * change — $inc, never a read-modify-write. Returns the updated stats block.
+ */
+async function incStats(id, delta) {
+  const $inc = {};
+  for (const [key, value] of Object.entries(delta)) {
+    if (value !== 0) $inc[`stats.${key}`] = value;
+  }
+  if (Object.keys($inc).length === 0) return null;
+  const doc = await Poem.findByIdAndUpdate(id, { $inc }, { new: true }).select('stats').lean();
+  return doc ? doc.stats : null;
+}
+
 async function createVersion({ poemId, title, content, versionNumber }) {
   return PoemVersion.create({ poemId, title, content, versionNumber, editedAt: new Date() });
 }
@@ -57,6 +71,7 @@ module.exports = {
   createPoem,
   updatePoem,
   softRemove,
+  incStats,
   createVersion,
   countVersions,
   nextVersionNumber,
