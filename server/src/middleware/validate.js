@@ -27,7 +27,18 @@ function validate(schemas) {
         }));
         return next(new ValidationError('Request validation failed', { details }));
       }
-      req[key] = result.data;
+      // Express 5 defines `req.query` as a getter-only prototype property —
+      // plain assignment throws. Shadow it with an own data property instead.
+      if (key === 'query') {
+        Object.defineProperty(req, 'query', {
+          value: result.data,
+          writable: true,
+          configurable: true,
+          enumerable: true,
+        });
+      } else {
+        req[key] = result.data;
+      }
     }
     return next();
   };

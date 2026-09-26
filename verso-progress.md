@@ -5,7 +5,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 1 complete — STOPPED for user review (Phase 2 next); repo pushed to Xantonozar/verso
+**Current status:** Phase 2 complete — STOPPED for user review (Phase 2B next); repo pushed to Xantonozar/verso
 **Last updated:** 2026-09-26
 
 ---
@@ -72,18 +72,18 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 2 — Poems (Core Creation + Reading)
 
-- [ ] 2.1 Poem + PoemVersion models
-- [ ] 2.2 Create-poem endpoint (draft status) + field-level 400 test
-- [ ] 2.3 Edit-poem (PoemVersion history, non-owner 403 test)
-- [ ] 2.4 Delete-poem (soft-delete `status: "removed"`)
-- [ ] 2.5 Get-poem (projection + visibility rules) + `explain()` check
-- [ ] 2.6 Get-poem-versions (paginated)
-- [ ] 2.7 Draft autosave endpoint (idempotent, no version spam)
-- [ ] 2.8 Mobile: poetry editor (line-break textarea, word counter, debounced autosave, draft recovery)
-- [ ] 2.9 Mobile: poem reading screen (skeleton, unavailable-state)
-- [ ] 2.10 Tests: create/edit/delete/get/versions/autosave + index plan check
+- [x] 2.1 Poem + PoemVersion models — `src/modules/poems/{poem,poem-version}.model.js` (soft-delete `status`, `statsSchema`, optional `currentVersionId` ref)
+- [x] 2.2 Create-poem endpoint (draft status) + field-level 400 test — `POST /api/v1/poems` (`status: draft`); publish deferred to Phase 3 by user decision
+- [x] 2.3 Edit-poem (PoemVersion history, non-owner 403 test) — `PATCH /poems/:id` versions only on title/content change; `GET /poems/:id/versions` cursor pagination
+- [x] 2.4 Delete-poem (soft-delete `status: "removed"`) — owner-only, reader hides removed poems (404)
+- [x] 2.5 Get-poem (projection + visibility rules) + `explain()` check — optionalAuth, fail-closed 404, anonymous hides author/authorId; `explain()` = IXSCAN `_id_` ✓
+- [x] 2.6 Get-poem-versions (paginated) — cursor = versionNumber desc, default 10, `explain()` = IXSCAN `poemId_1_versionNumber_-1` ✓
+- [x] 2.7 Draft autosave endpoint (idempotent, no version spam) — `PUT /poems/:id/draft`, owner-only, non-draft → 409 `NOT_A_DRAFT`, `changed:false` no-op, never versions
+- [x] 2.8 Mobile: poetry editor (line-break textarea, word counter, debounced autosave, draft recovery) — `components/PoemEditor.tsx` + `poem/new.tsx` + `poem/[id]/edit.tsx` + AsyncStorage draft recovery (`lib/poemDrafts.ts`)
+- [x] 2.9 Mobile: poem reading screen (skeleton, unavailable-state) — `poem/[id].tsx` (skeleton, gone/error states, owner edit button, draft badge) + `+ New poem` on profile
+- [x] 2.10 Tests: create/edit/delete/get/versions/autosave + index plan check — server **174/174** (38 new poem tests, lint 0); mobile **37/37** (18 new, tsc 0, lint 0); 18 indexes on `verso_dev` incl. `poemversions:poemId_1_versionNumber_-1`
 
-**Phase 2 gate:** tests green; `explain()` = IXSCAN on get-poem.
+**Phase 2 gate:** ✅ server 174/174 + mobile 37/37 + tsc/lint clean; `explain()` = IXSCAN on get-poem (`_id_`) and versions (`poemId_1_versionNumber_-1`).
 
 ---
 
@@ -291,3 +291,4 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 | 2026-09-26 | Phase 0 (incl. remote push) | yes |
 | 2026-09-26 | Phase 0.5 (incl. remote push) | awaiting review |
 | 2026-09-26 | Phase 1 (incl. remote push) | awaiting review |
+| 2026-09-26 | Phase 2 (incl. remote push) | awaiting review |

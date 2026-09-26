@@ -32,4 +32,6 @@ module.exports = [
   { collection: 'refreshtokens', key: { userId: 1 } },
   // refresh hot path — lookup by hash must be an IXSCAN, never a COLLSCAN (Phase 1)
   { collection: 'refreshtokens', key: { tokenHash: 1 }, options: { unique: true } },
+  // poem version history pagination (Phase 2)
+  { collection: 'poemversions', key: { poemId: 1, versionNumber: -1 } },
 ];

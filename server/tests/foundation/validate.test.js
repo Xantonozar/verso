@@ -54,6 +54,22 @@ describe('validate middleware (step 15)', () => {
     expect(res.body.error.details[0].field).toBe('query.page');
   });
 
+  // Regression (Phase 2): Express 5 `req.query` is getter-only — success-path
+  // replacement must shadow it, not assign (assignment threw a 500).
+  test('valid query is parsed, coerced, and readable via req.query', async () => {
+    const app = express();
+    app.get(
+      '/feed',
+      validate({ query: z.object({ page: z.coerce.number().int().positive() }) }),
+      (req, res) => ok(res, { page: req.query.page, type: typeof req.query.page }),
+    );
+    app.use(errorHandler);
+
+    const res = await request(app).get('/feed?page=3');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ page: 3, type: 'number' });
+  });
+
   test('params schema errors are namespaced (params.x)', async () => {
     const app = express();
     app.get(

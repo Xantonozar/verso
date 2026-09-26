@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -219,6 +220,11 @@ export default function ProfileScreen() {
               <Text style={styles.bioEmpty}>No bio yet — tap Edit to introduce yourself.</Text>
             )}
             <View style={styles.actions}>
+              <Button
+                label="+ New poem"
+                onPress={() => router.push('/poem/new')}
+                testID="new-poem"
+              />
               <Button label="Edit profile" variant="secondary" onPress={startEditing} testID="edit-profile" />
               <Button
                 label={uploading ? `Uploading… ${uploadProgress}%` : 'Change photo'}

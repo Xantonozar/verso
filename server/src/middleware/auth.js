@@ -114,4 +114,14 @@ async function loadUser(req, res, next) {
   }
 }
 
-module.exports = { requireAuth, optionalAuth, loadUser, verifyAccessToken, extractBearer };
+/**
+ * Like loadUser, but anonymous requests pass through untouched — for routes
+ * that are optionalAuth yet still need a full identity (roles, moderation)
+ * when a token IS present (e.g. GET /poems/:id moderator visibility).
+ */
+function loadUserOptional(req, res, next) {
+  if (!req.auth?.sub) return next();
+  return loadUser(req, res, next);
+}
+
+module.exports = { requireAuth, optionalAuth, loadUser, loadUserOptional, verifyAccessToken, extractBearer };
