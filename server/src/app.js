@@ -49,9 +49,11 @@ function createApp() {
   const { authRouter } = require('./modules/auth/auth.routes');
   const { userRouter } = require('./modules/users/user.routes');
   const { poemRouter } = require('./modules/poems/poem.routes');
+  const { storyRouter } = require('./modules/stories/story.routes');
   app.use(`${API_PREFIX}/auth`, authRouter);
   app.use(`${API_PREFIX}/users`, userRouter);
   app.use(`${API_PREFIX}/poems`, poemRouter);
+  app.use(`${API_PREFIX}/stories`, storyRouter);
 
   // Health probe (load balancer / deploy checks)
   app.get('/health', (req, res) => {

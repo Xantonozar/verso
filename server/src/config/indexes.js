@@ -34,4 +34,16 @@ module.exports = [
   { collection: 'refreshtokens', key: { tokenHash: 1 }, options: { unique: true } },
   // poem version history pagination (Phase 2)
   { collection: 'poemversions', key: { poemId: 1, versionNumber: -1 } },
+
+  // stories — profile list + public listing (Phase 2B)
+  { collection: 'stories', key: { authorId: 1, status: 1, createdAt: -1 } },
+  { collection: 'stories', key: { status: 1, createdAt: -1 } },
+  // ordered chapter list (unique so a race can't mint duplicate positions)
+  { collection: 'storychapters', key: { storyId: 1, chapterNumber: 1 }, options: { unique: true } },
+  // story/chapter version history (chapterId absent = metadata snapshot)
+  {
+    collection: 'storyversions',
+    key: { storyId: 1, chapterId: 1, versionNumber: -1 },
+    options: { unique: true },
+  },
 ];

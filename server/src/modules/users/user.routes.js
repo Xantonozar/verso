@@ -3,9 +3,14 @@
 const express = require('express');
 const multer = require('multer');
 const { validate } = require('../../middleware/validate');
-const { requireAuth, optionalAuth, loadUser } = require('../../middleware/auth');
+const { requireAuth, optionalAuth, loadUser, loadUserOptional } = require('../../middleware/auth');
 const { ValidationError } = require('../../errors');
 const { updateProfileSchema } = require('./user.schemas');
+const {
+  idParamSchema,
+  authorStoriesQuerySchema,
+} = require('../stories/story.schemas');
+const storyController = require('../stories/story.controller');
 const controller = require('./user.controller');
 
 const router = express.Router();
@@ -51,6 +56,15 @@ router.patch('/me', requireAuth, loadUser, validate({ body: updateProfileSchema 
 router.post('/me/photo', requireAuth, loadUser, uploadSingle(upload.single('photo')), controller.uploadPhoto);
 
 router.get('/:id', optionalAuth, controller.getProfile);
+// Profile story list (plan 41B) — lives in the stories module, routed under
+// /users because the profile owns the page.
+router.get(
+  '/:id/stories',
+  optionalAuth,
+  loadUserOptional,
+  validate({ params: idParamSchema, query: authorStoriesQuerySchema }),
+  storyController.listByAuthor,
+);
 router.post('/:id/follow', requireAuth, loadUser, controller.follow);
 router.delete('/:id/follow', requireAuth, loadUser, controller.unfollow);
 

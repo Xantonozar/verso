@@ -9,6 +9,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { TextField } from '../../components/TextField';
 import { AuthUser, useAuth } from '../../context/AuthContext';
 import api, { ApiError } from '../../lib/api/client';
+import { AuthorStoryItem, listAuthorStories } from '../../lib/api/stories';
 import { toast } from '../../lib/toast';
 import {
   CONNECTIVITY_TOAST,
@@ -46,6 +47,22 @@ export default function ProfileScreen() {
 
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [stories, setStories] = useState<AuthorStoryItem[]>([]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    listAuthorStories(user.id, { limit: 10 })
+      .then((page) => {
+        if (!cancelled) setStories(page.items);
+      })
+      .catch(() => {
+        // profile stories are a convenience — never block the screen
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   const fetchMe = useCallback(async (): Promise<AuthUser> => {
     const { data } = await api.get<AuthUser>('/users/me');
@@ -225,6 +242,11 @@ export default function ProfileScreen() {
                 onPress={() => router.push('/poem/new')}
                 testID="new-poem"
               />
+              <Button
+                label="+ New story"
+                onPress={() => router.push('/story/new')}
+                testID="new-story"
+              />
               <Button label="Edit profile" variant="secondary" onPress={startEditing} testID="edit-profile" />
               <Button
                 label={uploading ? `Uploading… ${uploadProgress}%` : 'Change photo'}
@@ -274,6 +296,29 @@ export default function ProfileScreen() {
             </View>
           </View>
         )}
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Stories</Text>
+          {stories.length === 0 ? (
+            <Text style={styles.bioEmpty} testID="empty-stories">
+              No stories yet — tap + New story to start one.
+            </Text>
+          ) : (
+            <View style={styles.storyList}>
+              {stories.map((story) => (
+                <Button
+                  key={story.id}
+                  label={`${story.title || 'Untitled story'} · ${story.chapterCount} ch · ${
+                    story.status === 'published' ? 'Published' : story.status === 'unlisted' ? 'Unlisted' : 'Draft'
+                  }`}
+                  variant="secondary"
+                  onPress={() => router.push(`/story/${story.id}/edit`)}
+                  testID={`story-row-${story.id}`}
+                />
+              ))}
+            </View>
+          )}
+        </View>
 
         <Button
           label="Sign out"
@@ -365,6 +410,14 @@ const styles = StyleSheet.create({
   bioEmpty: {
     ...typography.body,
     color: colors.inkMuted,
+  },
+  sectionTitle: {
+    ...typography.title,
+    fontSize: 18,
+    color: colors.ink,
+  },
+  storyList: {
+    gap: spacing.sm,
   },
   actions: {
     flexDirection: 'row',

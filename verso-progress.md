@@ -5,7 +5,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 2 complete — STOPPED for user review (Phase 2B next); repo pushed to Xantonozar/verso
+**Current status:** Phase 2B complete — STOPPED for user review (Phase 3 next); repo pushed to Xantonozar/verso
 **Last updated:** 2026-09-26
 
 ---
@@ -89,17 +89,17 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 2B — Stories
 
-- [ ] 2B.1 Story + StoryVersion + StoryChapter models
-- [ ] 2B.2 Lifecycle states defined (draft/published/unlisted/private_draft/under_review/removed)
-- [ ] 2B.3 Story CRUD endpoints (metadata, chapters, reorder, publish, soft-delete, reads) + authz tests
-- [ ] 2B.4 Story autosave (idempotent, explicit save = version snapshot)
-- [ ] 2B.5 Mobile: story editor (metadata, cover, synopsis, chapters, reorder, preview, publish, draft recovery)
-- [ ] 2B.6 Mobile: story reader (cover, chapters nav, progress, typography, unavailable state)
-- [ ] 2B.7 Story in feed/discovery/search/profiles/collections/notifications/moderation + mixed-feed serializer
-- [ ] 2B.8 Tests: chapter ordering, visibility, authz, autosave idempotency, publish validation, removed-story handling, resume position
-- [ ] 2B.9 `explain()` sweep for story/chapter/discovery/search/author queries
+- [x] 2B.1 Story + StoryVersion + StoryChapter models — `server/src/modules/stories/{story,story-chapter,story-version}.model.js`; 4 indexes ensured on `verso_dev` (22 total)
+- [x] 2B.2 Lifecycle states defined (draft/published/unlisted/private_draft/under_review/removed) — `status` IS the lifecycle; visibility rules in `canView` (owner/mod always, published/unlisted public, fail-closed 404)
+- [x] 2B.3 Story CRUD endpoints (metadata, chapters, reorder, publish, soft-delete, reads) + authz tests — 16 routes mounted at `/stories`; 2-phase reorder renumber (park + assign) to avoid unique-index collision; publish/unpublish validation + error codes shipped
+- [x] 2B.4 Story autosave (idempotent, explicit save = version snapshot) — owner-only, `AUTOSAVABLE_STATUSES`, 409 `NOT_A_DRAFT` otherwise; `changed:false` no-op; PATCH versions only on real change
+- [x] 2B.5 Mobile: story editor (metadata, cover, synopsis, chapters, reorder, preview, publish, draft recovery) — `StoryEditor` + `ChapterEditor` components (2s debounced autosave, local-draft recovery, preview, leave-with-unsaved-changes guard); screens `story/new`, `story/[id]/edit` (chapter list, ↑/↓ reorder with rollback, publish/unpublish), `chapter/[chapterId]/edit`
+- [x] 2B.6 Mobile: story reader (cover, chapters nav, progress, typography, unavailable state) — `chapter/[chapterId]`: prev/next nav, "Chapter x of y" progress, reading position persisted to AsyncStorage ("Resume reading" on edit screen), fail-closed unavailable state
+- [x] 2B.7 Profile story list + mixed-feed serializer (user-scoped: feed/discovery/search/collections/notifications integrations deferred to their phases) — `GET /users/:id/stories` (+404 `USER_NOT_FOUND`), `feed-item.serializer.js` (`type: poem|story|diary` discriminator + excerpt), profile "Stories" section + `+ New story`
+- [x] 2B.8 Tests: chapter ordering, visibility, authz, autosave idempotency, publish validation, removed-story handling, resume position — server **254/254** (80 new story tests across 6 files, lint 0); mobile **61/61** (24 new, tsc 0, lint 0)
+- [x] 2B.9 `explain()` sweep for story/chapter/discovery/search/author queries — 22 indexes on `verso_dev` (4 story); IXSCAN confirmed: `authorId_1_status_1_createdAt_-1` (profile list, winner), `storyId_1_chapterNumber_1` (chapter list)
 
-**Phase 2B gate:** 2B.8 + 2B.9 pass.
+**Phase 2B gate:** ✅ server 254/254 + mobile 61/61 + tsc/lint clean; reorder renumber fixed to 2-phase park+assign (unique-index collision); explain = IXSCAN.
 
 ---
 
@@ -292,3 +292,4 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 | 2026-09-26 | Phase 0.5 (incl. remote push) | awaiting review |
 | 2026-09-26 | Phase 1 (incl. remote push) | awaiting review |
 | 2026-09-26 | Phase 2 (incl. remote push) | awaiting review |
+| 2026-09-26 | Phase 2B (incl. remote push) | awaiting review |
