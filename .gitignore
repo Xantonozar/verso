@@ -1,0 +1,31 @@
+node_modules/
+coverage/
+dist/
+build/
+.env
+.env.local
+*.log
+logs/
+
+# opencode config (contains MCP API keys)
+opencode.json
+
+# Expo / React Native
+mobile/.expo/
+mobile/dist/
+mobile/node_modules/
+*.orig.*
+web-build/
+
+# Dependencies
+server/node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Stitch design assets (regenerable)
+.stitch/designs/*.html
