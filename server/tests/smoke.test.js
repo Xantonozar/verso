@@ -28,4 +28,20 @@ describe('app smoke', () => {
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
   });
+
+  test('X-Request-Id header is generated and echoed', async () => {
+    const res = await request(app).get('/health');
+    expect(res.headers['x-request-id']).toBeTruthy();
+    // Generated value is a UUID
+    expect(res.headers['x-request-id']).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    );
+  });
+
+  test('client-supplied X-Request-Id is echoed back', async () => {
+    const res = await request(app)
+      .get('/health')
+      .set('X-Request-Id', 'client-provided-123');
+    expect(res.headers['x-request-id']).toBe('client-provided-123');
+  });
 });

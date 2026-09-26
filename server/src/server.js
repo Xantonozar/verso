@@ -1,8 +1,7 @@
 'use strict';
 
-require('./config/loadEnv');
-
 const http = require('http');
+const { loadEnv, getConfig, EnvValidationError } = require('./config/env');
 const { createApp } = require('./app');
 const { connectMongo, disconnectMongo } = require('./config/db');
 const { connectRedis, disconnectRedis } = require('./config/redis');
@@ -10,16 +9,22 @@ const { configureCloudinary } = require('./config/cloudinary');
 const { createSocketServer } = require('./sockets');
 const { logger } = require('./config/logger');
 
-const PORT = Number(process.env.PORT) || 4000;
-
 async function main() {
-  // Fail fast on missing critical env (full schema validation arrives in Phase 0.5 step 12)
-  for (const key of ['MONGODB_URI', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET']) {
-    if (!process.env[key]) {
-      logger.fatal({ event: 'boot:missing-env', key }, `Missing required env var: ${key}`);
+  // Fail fast on invalid/missing env with a readable, per-field report (Phase 0.5 step 12)
+  try {
+    loadEnv();
+  } catch (err) {
+    if (err instanceof EnvValidationError) {
+      // Plain console: env (incl. LOG_LEVEL) failed validation, so the logger
+      // itself may be misconfigured. This must be readable regardless.
+      // eslint-disable-next-line no-console
+      console.error(`[FATAL] ${err.message}`);
       process.exit(1);
     }
+    throw err;
   }
+  const config = getConfig();
+  const PORT = config.PORT;
 
   // MongoDB is required to serve requests
   await connectMongo();

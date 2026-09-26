@@ -5,7 +5,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** starting Phase 0
+**Current status:** Phase 0.5 complete — STOPPED for user review (Phase 1 next)
 **Last updated:** 2026-09-26
 
 ---
@@ -21,9 +21,9 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 - [x] 0.7 Shared mobile toast + loading/empty/error state components — component tests green (3 tests)
 - [x] 0.8 Socket.io server attached to Express + connection logger — polling handshake 200 + sid verified
 - [x] 0.9 Jest backend + Jest/RNTL mobile test runner (trivial test green) — server 3/3, mobile 7/7, `tsc --noEmit` clean, `expo lint` clean
-- [ ] 0.10 Author `DESIGN.md` from §13 "Ink & Parchment" (dimensional tokens, no Stitch)
+- [x] 0.10 Author `DESIGN.md` from §13 "Ink & Parchment" (dimensional tokens, no Stitch) — markdown only (design-last per plan §8 step 92)
 - [x] 0.11 Create placeholder `theme/` files (colors/typography/spacing) from DESIGN.md — `mobile/src/theme/tokens.ts`
-- [ ] 0.12 GitHub repo init (or remote setup), .gitignore, CI test workflow
+- [~] 0.12 GitHub repo init (or remote setup), .gitignore, CI test workflow — CI (`.github/workflows/ci.yml`) + .gitignore + commit `0af2422` done; **remote push pending user manually creating `Xantonozar/verso`** (MCP token lacks repo-create scope, no gh CLI)
 
 **Phase 0 gate:** trivial backend + mobile tests pass locally; axios client unwraps envelope.
 
@@ -31,22 +31,22 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 0.5 — Architecture Foundation
 
-- [ ] 0.5.1 Standard API response envelope (success/error shape)
-- [ ] 0.5.2 Centralized error system (error classes, asyncHandler, global middleware) + unit tests
-- [ ] 0.5.3 Structured logger (pino/winston) + request-id middleware + `LOGGING.md`
-- [ ] 0.5.4 Env/config loader with fail-fast validation
-- [ ] 0.5.5 Mongoose base config (connection options, timestamps plugin, toJSON transform)
-- [ ] 0.5.6 Auth middleware skeleton (JWT verify, `req.user`)
-- [ ] 0.5.7 Validation middleware (Zod/Joi) returning field-level 400s
-- [ ] 0.5.8 Authorization helpers (`assertOwnerOrModerator`, etc.)
-- [ ] 0.5.9 Redis shared client (cache + rate limit) with degradation docs
-- [ ] 0.5.10 BullMQ foundation (queues, retries, backoff, dead-letter, worker error handler)
-- [ ] 0.5.11 MongoDB indexes from §4 via migration/init script + verified
-- [ ] 0.5.12 Socket.io JWT handshake auth + rejection logging
-- [ ] 0.5.13 Rate limiter on auth endpoints only (429 + Retry-After)
-- [ ] 0.5.14 Foundation integration tests (error envelope, config fail-fast, rate limiter blocks N+1)
+- [x] 0.5.1 Standard API response envelope (success/error shape) — `src/middleware/respond.js` (ok/created/noContent), 404 funneled through error middleware
+- [x] 0.5.2 Centralized error system (error classes, asyncHandler, global middleware) + unit tests — `src/errors/` + `asyncHandler` + `errorHandler` (Zod/Mongoose/CastError/11000/JSON-parse translation; prod strips stacks/internal messages) — 13 tests
+- [x] 0.5.3 Structured logger (pino/winston) + request-id middleware + `LOGGING.md` — pino already wired; added `X-Request-Id` response echo + `server/LOGGING.md`
+- [x] 0.5.4 Env/config loader with fail-fast validation — `src/config/env.js` (Zod schema, all 17 vars, distinct-JWT-secret check); boot fail-fast verified: `[FATAL] …JWT_ACCESS_SECRET: must be at least 32 characters`, exit 1 — 8 tests (replaces `loadEnv.js`)
+- [x] 0.5.5 Mongoose base config (connection options, timestamps plugin, toJSON transform) — `src/models/base.js` `createSchema`/`refField` (timestamps on, versionKey off, `strip` list, `__v` removed) — 4 tests
+- [x] 0.5.6 Auth middleware skeleton (JWT verify, `req.user`) — `requireAuth`/`optionalAuth` + `verifyAccessToken` (expired→AUTH_TOKEN_EXPIRED, forged/missing sub/wrong type→AUTH_INVALID_TOKEN; optionalAuth rejects present-but-invalid) — 12 tests
+- [x] 0.5.7 Validation middleware (Zod/Joi) returning field-level 400s — `validate({body/query/params})`, parsed+stripped input replaces originals, query fields namespaced `query.x` — 4 tests
+- [x] 0.5.8 Authorization helpers (`assertOwnerOrModerator`, etc.) — `assertOwner` (missing resource→404, wrong owner→403, anon→401), `assertOwnerOrModerator`, `assertAdmin`, `isModerator` — 10 tests
+- [x] 0.5.9 Redis shared client (cache + rate limit) with degradation docs — client existed; added `server/REDIS.md` (degradation contract, two clients, fail-open policy) + Redis store w/ memory fallback in rate limiter — 3 degradation tests
+- [x] 0.5.10 BullMQ foundation (queues, retries, backoff, dead-letter, worker error handler) — `src/jobs/{connection,options,queues,worker}.js`: 3 attempts + exponential 1s, lifecycle logging (enqueued/started/completed/retry/permanent), permanent→`verso:dead-letter`; pure-logic tests (no local Redis) — 8 tests
+- [x] 0.5.11 MongoDB indexes from §4 via migration/init script + verified — `src/config/indexes.js` (14 indexes) + `scripts/init-indexes.js` run against `verso_dev`; **verified via mongodb MCP `collection-indexes`** (poems 3, follows 2, reactions unique, refreshtokens 2 sampled)
+- [x] 0.5.12 Socket.io JWT handshake auth + rejection logging — `io.use()` accepts `auth.token` or Authorization header; rejections logged `socket:auth-rejected` with reason + `data.code` to client — 3 live-socket tests
+- [x] 0.5.13 Rate limiter on auth endpoints only (429 + Retry-After) — 30 req/min per IP+method+path on `/api/v1/auth`; `X-RateLimit-*` + `Retry-After` headers; Redis (Lua INCR/PEXPIRE) → memory fallback → fail-open; 429 path tested end-to-end at app level
+- [x] 0.5.14 Foundation integration tests (error envelope, config fail-fast, rate limiter blocks N+1) — 9 foundation suites; **full run: 69/69 green, lint clean**; boot smoke: health 200 + X-Request-Id, 404 envelope, Redis degraded warn, server stays up
 
-**Phase 0.5 gate:** foundation tests green; all §4 indexes confirmed via `mongodb_collection-indexes`.
+**Phase 0.5 gate:** ✅ foundation tests green (69/69); all §4 indexes confirmed via `mongodb_collection-indexes`.
 
 ---
 
@@ -288,4 +288,5 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 | Date | Phase completed | User reviewed? |
 |---|---|---|
-| — | — | — |
+| 2026-09-26 | Phase 0 (0.12 remote pending) | yes |
+| 2026-09-26 | Phase 0.5 | awaiting review |

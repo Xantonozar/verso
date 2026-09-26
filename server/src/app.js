@@ -5,6 +5,9 @@ const helmet = require('helmet');
 const cors = require('cors');
 const { pinoHttp } = require('pino-http');
 const { logger } = require('./config/logger');
+const { errorHandler } = require('./middleware/errorHandler');
+const { NotFoundError } = require('./errors');
+const { createAuthRateLimiter } = require('./middleware/rateLimit');
 
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 
@@ -23,6 +26,12 @@ function createApp() {
     }),
   );
 
+  // Echo the correlation id so clients can report it in bug reports (§7.2)
+  app.use((req, res, next) => {
+    res.setHeader('X-Request-Id', String(req.id));
+    next();
+  });
+
   app.use(helmet());
   app.use(
     cors({
@@ -33,32 +42,21 @@ function createApp() {
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true }));
 
+  // Brute-force protection on every auth endpoint (§7.3, Phase 0.5 step 21)
+  app.use(`${API_PREFIX}/auth`, createAuthRateLimiter());
+
   // Health probe (load balancer / deploy checks)
   app.get('/health', (req, res) => {
     res.json({ success: true, data: { status: 'ok', uptime: process.uptime() } });
   });
 
-  // 404 for unknown API routes (Express 5: bare '*' pattern removed)
-  app.use((req, res) => {
-    res.status(404).json({
-      success: false,
-      error: { code: 'NOT_FOUND', message: `Route ${req.method} ${req.path} not found` },
-    });
+  // 404 funnels into the centralized error middleware (Express 5: bare '*' removed)
+  app.use((req, res, next) => {
+    next(new NotFoundError(`Route ${req.method} ${req.path} not found`));
   });
 
-  // Phase 0.5 (step 10) replaces this placeholder with the centralized
-  // error-handling middleware (custom error classes, envelope, stack stripping).
-  // eslint-disable-next-line no-unused-vars
-  app.use((err, req, res, next) => {
-    logger.error({ err, requestId: req.id }, 'Unhandled error');
-    res.status(err.statusCode || 500).json({
-      success: false,
-      error: {
-        code: err.code || 'INTERNAL_ERROR',
-        message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : err.message,
-      },
-    });
-  });
+  // Centralized error handling — the only response shaper for failures (§7.1)
+  app.use(errorHandler);
 
   return app;
 }
