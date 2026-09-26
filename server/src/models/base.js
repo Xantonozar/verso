@@ -24,6 +24,12 @@ function createSchema(definition, options = {}) {
       transform(_doc, ret) {
         delete ret.__v;
         for (const key of strip) delete ret[key];
+        // Expose a stable string `id` and drop Mongo's `_id` so every API
+        // response uses the same identifier shape as the public serializers.
+        if (ret._id !== undefined) {
+          ret.id = String(ret._id);
+          delete ret._id;
+        }
         if (typeof toJSON?.transform === 'function') return toJSON.transform(_doc, ret);
         return ret;
       },

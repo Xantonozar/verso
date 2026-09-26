@@ -9,6 +9,9 @@
  * Verified against the live `verso_dev` DB via MongoDB MCP (Phase 0.5 step 11).
  */
 module.exports = [
+  // users — unique constraints from §3.1 (username/email)
+  { collection: 'users', key: { username: 1 }, options: { unique: true } },
+  { collection: 'users', key: { email: 1 }, options: { unique: true } },
   { collection: 'poems', key: { authorId: 1, status: 1, createdAt: -1 } },
   { collection: 'poems', key: { moods: 1, status: 1, visibility: 1, createdAt: -1 } },
   { collection: 'poems', key: { tags: 1, status: 1, createdAt: -1 } },
@@ -27,4 +30,6 @@ module.exports = [
   { collection: 'feltgoodratings', key: { poemId: 1, userId: 1 }, options: { unique: true } },
   { collection: 'refreshtokens', key: { familyId: 1, status: 1 } },
   { collection: 'refreshtokens', key: { userId: 1 } },
+  // refresh hot path — lookup by hash must be an IXSCAN, never a COLLSCAN (Phase 1)
+  { collection: 'refreshtokens', key: { tokenHash: 1 }, options: { unique: true } },
 ];

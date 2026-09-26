@@ -1,5 +1,11 @@
-import { AxiosError, InternalAxiosRequestConfig, create as createHttpClient } from 'axios';
-import { clearAccessToken, getAccessToken } from './tokenStore';
+import axios, { AxiosError, InternalAxiosRequestConfig, create as createHttpClient } from 'axios';
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  setAccessToken,
+  setRefreshToken,
+} from './tokenStore';
 
 export interface ApiEnvelope<T> {
   success: boolean;
@@ -29,7 +35,7 @@ type UnauthorizedHandler = () => void;
 
 let unauthorizedHandler: UnauthorizedHandler | null = null;
 
-/** Phase 1 wires this to reset navigation to the auth flow on 401. */
+/** Wired by AuthProvider to reset navigation to the auth flow when the session dies. */
 export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
   unauthorizedHandler = handler;
 }
@@ -49,6 +55,49 @@ api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   }
   return config;
 });
+
+interface RetryableConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
+
+let refreshPromise: Promise<string | null> | null = null;
+
+/**
+ * Rotate the stored refresh token for a fresh access token. Concurrent 401s
+ * share one in-flight refresh; any failure returns null (caller signs out).
+ */
+async function refreshAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = doRefresh().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+async function doRefresh(): Promise<string | null> {
+  try {
+    const refreshToken = await getRefreshToken();
+    if (!refreshToken) return null;
+    // Bare axios: the interceptors on `api` must not recurse into refresh.
+    const res = await axios.post<{ success: boolean; data?: { accessToken?: string; refreshToken?: string } }>(
+      `${baseURL}/auth/refresh`,
+      { refreshToken },
+      { timeout: 15000 },
+    );
+    const data = res.data?.data;
+    if (!data?.accessToken) return null;
+    await setAccessToken(data.accessToken);
+    if (data.refreshToken) await setRefreshToken(data.refreshToken);
+    return data.accessToken;
+  } catch {
+    return null;
+  }
+}
+
+function isAuthPath(url?: string): boolean {
+  return (url ?? '').includes('/auth/');
+}
 
 api.interceptors.response.use(
   (response) => {
@@ -72,10 +121,22 @@ api.interceptors.response.use(
   async (error: AxiosError<ApiEnvelope<unknown>>) => {
     if (error.response) {
       const { status, data } = error.response;
-      if (status === 401) {
-        await clearAccessToken();
+      const config = error.config as RetryableConfig | undefined;
+
+      if (status === 401 && !isAuthPath(config?.url)) {
+        if (config && !config._retry) {
+          // One silent refresh + retry; login/refresh failures never get here.
+          config._retry = true;
+          const fresh = await refreshAccessToken();
+          if (fresh) {
+            config.headers.set('Authorization', `Bearer ${fresh}`);
+            return api.request(config);
+          }
+        }
+        await clearTokens();
         unauthorizedHandler?.();
       }
+
       return Promise.reject(
         new ApiError(
           data?.error?.message ?? 'Request failed',

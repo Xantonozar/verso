@@ -45,6 +45,12 @@ function createApp() {
   // Brute-force protection on every auth endpoint (§7.3, Phase 0.5 step 21)
   app.use(`${API_PREFIX}/auth`, createAuthRateLimiter());
 
+  // Feature modules (§2: routes → controller → service → repository → model)
+  const { authRouter } = require('./modules/auth/auth.routes');
+  const { userRouter } = require('./modules/users/user.routes');
+  app.use(`${API_PREFIX}/auth`, authRouter);
+  app.use(`${API_PREFIX}/users`, userRouter);
+
   // Health probe (load balancer / deploy checks)
   app.get('/health', (req, res) => {
     res.json({ success: true, data: { status: 'ok', uptime: process.uptime() } });

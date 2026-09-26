@@ -5,7 +5,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 0.5 complete — STOPPED for user review (Phase 1 next)
+**Current status:** Phase 1 complete — STOPPED for user review (Phase 2 next); repo pushed to Xantonozar/verso
 **Last updated:** 2026-09-26
 
 ---
@@ -23,7 +23,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 - [x] 0.9 Jest backend + Jest/RNTL mobile test runner (trivial test green) — server 3/3, mobile 7/7, `tsc --noEmit` clean, `expo lint` clean
 - [x] 0.10 Author `DESIGN.md` from §13 "Ink & Parchment" (dimensional tokens, no Stitch) — markdown only (design-last per plan §8 step 92)
 - [x] 0.11 Create placeholder `theme/` files (colors/typography/spacing) from DESIGN.md — `mobile/src/theme/tokens.ts`
-- [~] 0.12 GitHub repo init (or remote setup), .gitignore, CI test workflow — CI (`.github/workflows/ci.yml`) + .gitignore + commit `0af2422` done; **remote push pending user manually creating `Xantonozar/verso`** (MCP token lacks repo-create scope, no gh CLI)
+- [x] 0.12 GitHub repo init (or remote setup), .gitignore, CI test workflow — CI (`.github/workflows/ci.yml`) + .gitignore + commits `0af2422` (Phase 0) + `1f11ea0` (Phase 0.5) pushed to `Xantonozar/verso`
 
 **Phase 0 gate:** trivial backend + mobile tests pass locally; axios client unwraps envelope.
 
@@ -52,21 +52,21 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 1 — Auth & Users
 
-- [ ] 1.1 User model + repository
-- [ ] 1.2 RefreshToken model (token family + reuse detection) + indexes
-- [ ] 1.3 Register endpoint (validation, bcrypt, tokens) + tests (409 dup, 400 weak password)
-- [ ] 1.4 Login endpoint (401 without user enumeration) + tests
-- [ ] 1.5 Refresh endpoint (rotation + family revoke on reuse) + reuse-detection test
-- [ ] 1.6 Logout + log-out-everywhere endpoints
-- [ ] 1.7 Wire auth middleware to real lookups + integration tests
-- [ ] 1.8 Profile endpoints (get/update/photo upload, no mass-assign) + tests
-- [ ] 1.9 Follow/unfollow (atomic $inc, 409 on dup) + tests
-- [ ] 1.10 Mobile: register/login screens (field errors, SecureStore, loading, toast)
-- [ ] 1.11 Mobile: profile screen (view/edit, photo, optimistic follow + rollback)
-- [ ] 1.12 Mobile component tests for auth/profile loading/error states
-- [ ] 1.13 MongoDB: verify unique indexes + `explain()` on refresh/follow hot paths
+- [x] 1.1 User model + repository — `src/modules/users/{model,repository}` + publicProfile serializer
+- [x] 1.2 RefreshToken model (token family + reuse detection) + indexes — familyId/status/tokenHash indexes ensured via `scripts/init-indexes.js`
+- [x] 1.3 Register endpoint (validation, bcrypt, tokens) + tests (409 dup, 400 weak password)
+- [x] 1.4 Login endpoint (401 without user enumeration) + tests
+- [x] 1.5 Refresh endpoint (rotation + family revoke on reuse) + reuse-detection test (401 AUTH_REFRESH_REUSED)
+- [x] 1.6 Logout + log-out-everywhere endpoints
+- [x] 1.7 Wire auth middleware to real lookups + integration tests — `requireAuth` hits real users; banned account → 403 ACCOUNT_BANNED
+- [x] 1.8 Profile endpoints (get/update/photo upload, no mass-assign) + tests — allow-list displayName/bio/language; 5MB image-only multer
+- [x] 1.9 Follow/unfollow (atomic $inc, 409 on dup) + tests — self-follow 400, dup 409, unfollow 404
+- [x] 1.10 Mobile: register/login screens (field errors, SecureStore, loading, toast) — `(auth)/login|register` + AuthContext bootstrap/refresh wiring
+- [x] 1.11 Mobile: profile screen (view/edit, photo, optimistic follow + rollback) — `(app)/profile` + `(app)/user/[id]` with rollback error toast
+- [x] 1.12 Mobile component tests for auth/profile loading/error states — 9 auth-screen tests + 3 refresh-retry interceptor tests; **mobile 19/19 green, tsc 0, lint 0**
+- [x] 1.13 MongoDB: verify unique indexes + `explain()` on refresh/follow hot paths — 17 indexes on `verso_dev`; `EXPRESS_IXSCAN tokenHash_1` + `IXSCAN followerId_1_followingId_1` ✓
 
-**Phase 1 gate:** integration tests for every endpoint (success + documented failures); component tests green.
+**Phase 1 gate:** ✅ integration tests for every endpoint (success + documented failures) — server **135/135** across 14 suites; component tests green — mobile **19/19**; boot smoke `/health` 200, `/users/me` 401.
 
 ---
 
@@ -288,5 +288,6 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 | Date | Phase completed | User reviewed? |
 |---|---|---|
-| 2026-09-26 | Phase 0 (0.12 remote pending) | yes |
-| 2026-09-26 | Phase 0.5 | awaiting review |
+| 2026-09-26 | Phase 0 (incl. remote push) | yes |
+| 2026-09-26 | Phase 0.5 (incl. remote push) | awaiting review |
+| 2026-09-26 | Phase 1 (incl. remote push) | awaiting review |
