@@ -5,7 +5,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 3 complete — STOPPED for user review (Phase 4: Diary next); server + mobile pushed to Xantonozar/verso
+**Current status:** Phase 4 complete — STOPPED for user review (Phase 5: Discovery & Feed next); server + mobile pushed to Xantonozar/verso
 **Last updated:** 2026-09-27
 
 ---
@@ -117,11 +117,11 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 4 — Diary
 
-- [ ] 4.1 DiaryEntry model + endpoints (reactions/comments only; no Felt Good route — router-enforced)
-- [ ] 4.2 Integration test: diary never in mood/tag discovery
-- [ ] 4.3 Mobile: diary composer (distinct from poem editor)
+- [x] 4.1 DiaryEntry model + endpoints (reactions/comments only; no Felt Good route — router-enforced) - `modules/diary/*` mounted at `/diary` (POST create, GET read; visibility public/followers, 1–280 chars, anonymous hide-identity), engagement generalized (`loadTarget(targetType…)`, diary reactions at `POST/DELETE /diary/:id/reactions`, comments via generic `/comments` with diary stats dispatch); felt-good/save/patch/delete diary routes → 404
+- [x] 4.2 Integration test: diary never in mood/tag discovery - `tests/diary/discovery-isolation.test.js` (own collection, no moods/tags/title/status/feltGood schema paths, Phase 5 mood/tag query shapes match 0 diary docs, cross-id reads 404 both ways, `/users/:id/stories` excludes diary)
+- [x] 4.3 Mobile: diary composer (distinct from poem editor) - `app/(app)/diary/new.tsx` (one-liner framing, 0/280 counter, public/followers segmented, raw TextInput + field/form errors), `lib/api/diary.ts`, profile `+ New diary` entry point; mobile gates 85/85 tests, `tsc --noEmit` 0, `expo lint` 0
 
-**Phase 4 gate:** 4.2 green.
+**Phase 4 gate:** ✅ 4.2 green (discovery-isolation suite passes); server **339/339** across 32 suites + lint 0; mobile **85/85** + tsc/lint clean.
 
 ---
 
@@ -294,3 +294,4 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 | 2026-09-26 | Phase 2 (incl. remote push) | awaiting review |
 | 2026-09-26 | Phase 2B (incl. remote push) | awaiting review |
 | 2026-09-27 | Phase 3 (incl. remote push) | awaiting review |
+| 2026-09-27 | Phase 4 (incl. remote push) | awaiting review |

@@ -37,6 +37,23 @@ router.delete(
   controller.removeReaction,
 );
 
+// diary reactions (plan step 50) — same contract as poems; NO felt-good/save
+// routes exist for diary (router-enforced, not just undocumented)
+router.post(
+  '/diary/:id/reactions',
+  requireAuth,
+  loadUser,
+  validate({ params: idParamSchema, body: reactionBodySchema }),
+  controller.addDiaryReaction,
+);
+router.delete(
+  '/diary/:id/reactions/:type',
+  requireAuth,
+  loadUser,
+  validate({ params: reactionParamsSchema }),
+  controller.removeDiaryReaction,
+);
+
 // felt good — POST = first rating (409 if exists), PATCH = update path (step 47)
 router.post(
   '/poems/:id/felt-good',

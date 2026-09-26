@@ -258,7 +258,7 @@ describe('POST /comments — create (plan step 45)', () => {
     expect(own.status).toBe(201);
   });
 
-  test('diary target (Phase 4 not built) → 404 TARGET_NOT_FOUND', async () => {
+  test('unknown diary id → 404 TARGET_NOT_FOUND', async () => {
     const reader = await register();
     const res = await comment(reader.accessToken, {
       targetType: 'diary',

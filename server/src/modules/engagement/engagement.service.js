@@ -6,6 +6,7 @@ const { logger } = require('../../config/logger');
 const { User } = require('../users/user.model');
 const poemService = require('../poems/poem.service');
 const poemRepo = require('../poems/poem.repository');
+const diaryService = require('../diary/diary.service');
 const engagementRepo = require('./engagement.repository');
 
 /**
@@ -33,6 +34,24 @@ async function loadPoemTarget(poemId, requester) {
   if (!poem || poem.status === 'removed') throw poemNotFound();
   if (!(await poemService.canView(poem, requester))) throw poemNotFound();
   return poem;
+}
+
+/** Any engagement target (plan step 50): poems + diary, fail-closed 404s. */
+async function loadTarget(targetType, targetId, requester) {
+  if (targetType === 'poem') return loadPoemTarget(targetId, requester);
+  if (targetType === 'diary') return diaryService.loadTarget(targetId, requester);
+  // collabSegment resolver lands with Phase 8
+  throw new NotFoundError('Comment target not found', { code: 'TARGET_NOT_FOUND' });
+}
+
+/**
+ * Stats dispatch — the ONLY counters that move for engagement writes. Every
+ * implementation is $inc-only (plan step 46 rule; diary mirrors it).
+ */
+async function incStats(targetType, id, delta) {
+  if (targetType === 'poem') return poemRepo.incStats(id, delta);
+  if (targetType === 'diary') return diaryService.incStats(id, delta);
+  return null;
 }
 
 function assertScore(score) {
@@ -106,9 +125,9 @@ function serializeComment(doc, { author = null, requester = null } = {}) {
 
 // --- reactions ---
 
-async function addReaction(poemId, user, body) {
-  const poem = await loadPoemTarget(poemId, user);
-  const query = { targetType: 'poem', targetId: poem._id, userId: user.id, type: body.type };
+async function addReaction(targetType, targetId, user, body) {
+  const target = await loadTarget(targetType, targetId, user);
+  const query = { targetType, targetId: target._id, userId: user.id, type: body.type };
 
   if (await engagementRepo.findReaction(query)) {
     throw new ConflictError('You already reacted with this type', { code: 'ALREADY_REACTED' });
@@ -128,24 +147,24 @@ async function addReaction(poemId, user, body) {
     throw err;
   }
 
-  const stats = await poemRepo.incStats(poem._id, { reactionCount: 1 });
-  logger.info({ poemId: String(poem._id), userId: user.id, type: body.type }, 'reaction added');
+  const stats = await incStats(targetType, target._id, { reactionCount: 1 });
+  logger.info({ targetType, targetId: String(target._id), userId: user.id, type: body.type }, 'reaction added');
   return { reaction: serializeReaction(doc), stats };
 }
 
-async function removeReaction(poemId, user, type) {
-  const poem = await loadPoemTarget(poemId, user);
+async function removeReaction(targetType, targetId, user, type) {
+  const target = await loadTarget(targetType, targetId, user);
   const res = await engagementRepo.deleteReaction({
-    targetType: 'poem',
-    targetId: poem._id,
+    targetType,
+    targetId: target._id,
     userId: user.id,
     type,
   });
 
-  let stats = poem.stats;
+  let stats = target.stats;
   if (res.deletedCount === 1) {
-    stats = await poemRepo.incStats(poem._id, { reactionCount: -1 });
-    logger.info({ poemId: String(poem._id), userId: user.id, type }, 'reaction removed');
+    stats = await incStats(targetType, target._id, { reactionCount: -1 });
+    logger.info({ targetType, targetId: String(target._id), userId: user.id, type }, 'reaction removed');
   }
   // idempotent: removing an absent reaction succeeds and never double-decrements
   return { removed: res.deletedCount === 1, type, stats };
@@ -235,12 +254,6 @@ async function unsavePoem(poemId, user) {
 
 // --- comments ---
 
-async function loadTarget(targetType, targetId, requester) {
-  if (targetType === 'poem') return loadPoemTarget(targetId, requester);
-  // diary (Phase 4) / collabSegment (Phase 8) resolvers land with their phases
-  throw new NotFoundError('Comment target not found', { code: 'TARGET_NOT_FOUND' });
-}
-
 async function createComment(user, body) {
   const target = await loadTarget(body.targetType, body.targetId, user);
 
@@ -278,8 +291,8 @@ async function createComment(user, body) {
     content: body.content,
   });
 
-  if (body.targetType === 'poem') {
-    await poemRepo.incStats(target._id, { commentCount: 1 });
+  if (body.targetType === 'poem' || body.targetType === 'diary') {
+    await incStats(body.targetType, target._id, { commentCount: 1 });
   }
   logger.info({ commentId: String(doc._id), userId: user.id }, 'comment created');
   // requester identity from loadUser is enough to render the new row at once
@@ -367,8 +380,8 @@ async function deleteComment(commentId, user) {
   assertOwnerOrModerator(comment, user);
 
   const flipped = await engagementRepo.softDeleteComment(comment._id);
-  if (flipped && comment.targetType === 'poem') {
-    await poemRepo.incStats(comment.targetId, { commentCount: -1 });
+  if (flipped && (comment.targetType === 'poem' || comment.targetType === 'diary')) {
+    await incStats(comment.targetType, comment.targetId, { commentCount: -1 });
   }
   logger.info({ commentId, userId: user.id }, 'comment removed (soft)');
   return { id: commentId, deleted: true, status: 'removed' };

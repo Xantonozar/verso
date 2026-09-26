@@ -9,11 +9,21 @@ const service = require('./engagement.service');
  */
 
 const addReaction = asyncHandler(async (req, res) => {
-  created(res, await service.addReaction(req.params.id, req.user, req.body));
+  created(res, await service.addReaction('poem', req.params.id, req.user, req.body));
 });
 
 const removeReaction = asyncHandler(async (req, res) => {
-  ok(res, await service.removeReaction(req.params.id, req.user, req.params.type));
+  ok(res, await service.removeReaction('poem', req.params.id, req.user, req.params.type));
+});
+
+// diary reactions (plan step 50) — same handlers, diary target type; there is
+// deliberately no diary felt-good/save handler to route to
+const addDiaryReaction = asyncHandler(async (req, res) => {
+  created(res, await service.addReaction('diary', req.params.id, req.user, req.body));
+});
+
+const removeDiaryReaction = asyncHandler(async (req, res) => {
+  ok(res, await service.removeReaction('diary', req.params.id, req.user, req.params.type));
 });
 
 const rate = asyncHandler(async (req, res) => {
@@ -52,6 +62,8 @@ const getMobilePoem = asyncHandler(async (req, res) => {
 module.exports = {
   addReaction,
   removeReaction,
+  addDiaryReaction,
+  removeDiaryReaction,
   rate,
   updateRating,
   save,

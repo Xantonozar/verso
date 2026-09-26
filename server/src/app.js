@@ -55,13 +55,18 @@ function createApp() {
   const { userRouter } = require('./modules/users/user.routes');
   const { poemRouter } = require('./modules/poems/poem.routes');
   const { storyRouter } = require('./modules/stories/story.routes');
+  const { diaryRouter } = require('./modules/diary/diary.routes');
   const { engagementRouter } = require('./modules/engagement/engagement.routes');
   app.use(`${API_PREFIX}/auth`, authRouter);
   app.use(`${API_PREFIX}/users`, userRouter);
   app.use(`${API_PREFIX}/poems`, poemRouter);
   app.use(`${API_PREFIX}/stories`, storyRouter);
-  // Engagement (Phase 3): /poems/:id/reactions|felt-good|save, /comments, and
-  // the /mobile BFF — full paths from API_PREFIX, mounted after poemRouter
+  // Diary (Phase 4): POST/GET only — felt-good/save/patch/delete routes do not
+  // exist for diary at all (plan step 50, router-enforced)
+  app.use(`${API_PREFIX}/diary`, diaryRouter);
+  // Engagement (Phases 3-4): /poems/:id/* + /diary/:id/reactions, /comments,
+  // and the /mobile BFF — full paths from API_PREFIX, mounted after the
+  // poem/diary routers
   app.use(`${API_PREFIX}`, engagementRouter);
 
   // Health probe (load balancer / deploy checks)
