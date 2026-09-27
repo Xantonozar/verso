@@ -5,7 +5,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 10 complete — STOPPED for user review (Phase 11: Notifications next); server + mobile pushed to Xantonozar/verso
+**Current status:** Phase 11 complete — STOPPED for user review (Phase 12: Analytics next); server + mobile pushed to Xantonozar/verso
 **Last updated:** 2026-09-28
 
 ---
@@ -195,13 +195,13 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 11 — Notifications
 
-- [ ] 11.1 Notification model (`readAt`)
-- [ ] 11.2 BullMQ notification worker (poetic templates, idempotent jobs)
-- [ ] 11.3 Expo push delivery from worker (delivery failures logged, don't fail job)
-- [ ] 11.4 Mobile: notification list (mark-read on view, badge) + push permission explainer flow
-- [ ] 11.5 Idempotency test: retried job doesn't duplicate notification
+- [x] 11.1 Notification model (`readAt`) - `modules/notifications/notification.model.js` (eventKey unique, `{userId:1, readAt:1, createdAt:-1}` index); producer wiring (reactions, comments, follows, collab turns, duel results) + `PUT /users/me/push-token`
+- [x] 11.2 BullMQ notification worker (poetic templates, idempotent jobs) - `jobs/notifications.js` deterministic jobId=eventKey + `notifications.js` service/dispatcher; socket emit `notification:push`
+- [x] 11.3 Expo push delivery from worker (delivery failures logged, don't fail job) - `deliverExpoPush` never throws; DeviceNotRegistered clears token; Redis-down → `{queued:false,reason:'redis-down'}`
+- [x] 11.4 Mobile: notification list (mark-read on view, badge) + push permission explainer flow - `(app)/notifications.tsx` + profile entry button + `lib/api/notifications.ts`; 10 screen tests
+- [x] 11.5 Idempotency test: retried job doesn't duplicate notification - `tests/notifications/notifications.test.js` 36 tests (duplicate eventKey → 1 row, no second socket emit)
 
-**Phase 11 gate:** 11.5 green; `explain()` on list query.
+**Phase 11 gate:** 11.5 green; `explain()` on list query IXSCAN on `userId_1_readAt_1_createdAt_-1`; server **524/524** + eslint 0; mobile **166/166** + tsc/lint 0.
 
 ---
 

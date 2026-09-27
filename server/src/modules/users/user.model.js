@@ -34,6 +34,8 @@ const userSchema = createSchema(
       default: () => ({ product: ['reader'], security: 'user' }),
     },
     language: { type: String, enum: ['bn', 'en', 'both'], default: 'en' },
+    // Expo push token (Phase 11 step 80) - '' = not registered / revoked
+    pushToken: { type: String, default: '', maxlength: 512 },
     followerCount: { type: Number, default: 0 },
     followingCount: { type: Number, default: 0 },
     readingStreak: {

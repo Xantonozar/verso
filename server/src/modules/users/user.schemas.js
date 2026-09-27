@@ -22,4 +22,10 @@ const idParamSchema = z.object({
   id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'must be a valid id'),
 });
 
-module.exports = { updateProfileSchema, idParamSchema };
+// Push registration (Phase 11 step 80): null (or empty) clears the stored
+// Expo push token - the "turned notifications off" path.
+const pushTokenSchema = z.object({
+  token: z.string().max(512).nullable(),
+});
+
+module.exports = { updateProfileSchema, idParamSchema, pushTokenSchema };

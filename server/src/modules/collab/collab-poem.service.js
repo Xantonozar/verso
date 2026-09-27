@@ -3,6 +3,7 @@
 const { NotFoundError, ForbiddenError, ConflictError, ValidationError } = require('../../errors');
 const { CollabPoem } = require('./collab-poem.model');
 const { User } = require('../users/user.model');
+const notificationsDispatcher = require('../notifications/notifications.dispatcher');
 
 /**
  * CollabPoem service (plan step 63): fixed-turn relay collaboration.
@@ -127,13 +128,27 @@ async function addTurn(id, user, { content }) {
   }
 
   // Append-only: order = current length (server-derived, no trust in client)
+  const order = collab.turns.length;
   collab.turns.push({
     authorId: user.id,
     lines: content,
-    order: collab.turns.length,
+    order,
     createdAt: new Date(),
   });
   await collab.save();
+
+  // Creator notified when someone else extends their relay (Phase 11 step 79)
+  if (String(collab.creatorId) !== String(user.id)) {
+    notificationsDispatcher.dispatchNotification({
+      recipientId: collab.creatorId,
+      type: 'collab_turn',
+      relatedType: 'collab_poem',
+      relatedId: collab._id,
+      eventKey: `collab_turn:${collab._id}:${order}:${user.id}`,
+      actor: { id: user.id, displayName: user.displayName, username: user.username },
+    });
+  }
+
   return serialize(collab);
 }
 

@@ -30,6 +30,8 @@ module.exports = [
   { collection: 'collaborationsegments', key: { pieceId: 1, parentId: 1 } },
   { collection: 'messages', key: { conversationId: 1, createdAt: -1 } },
   { collection: 'notifications', key: { userId: 1, readAt: 1, createdAt: -1 } },
+  // Phase 11 - idempotent worker insert (§10.15): one row per event, ever
+  { collection: 'notifications', key: { eventKey: 1 }, options: { unique: true } },
   { collection: 'feltgoodratings', key: { poemId: 1, userId: 1 }, options: { unique: true } },
   { collection: 'refreshtokens', key: { familyId: 1, status: 1 } },
   { collection: 'refreshtokens', key: { userId: 1 } },

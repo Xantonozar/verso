@@ -5,6 +5,7 @@ const { AppError, NotFoundError, ConflictError, ValidationError } = require('../
 const { User } = require('./user.model');
 const { Follow } = require('./follow.model');
 const userRepo = require('./user.repository');
+const notificationsDispatcher = require('../notifications/notifications.dispatcher');
 
 /**
  * User service (Phase 1 steps 30–31): profiles, follow/unfollow, photo upload.
@@ -149,6 +150,17 @@ async function follow(targetId, followerId) {
     userRepo.incrementCounts(targetId, { followerCount: 1 }),
   ]);
 
+  // Follow notification (Phase 11 step 79) — fire-and-forget, never blocks
+  // the response; the worker resolves the follower's display name itself.
+  notificationsDispatcher.dispatchNotification({
+    recipientId: targetId,
+    type: 'follow',
+    relatedType: 'user',
+    relatedId: followerId,
+    eventKey: `follow:${followerId}:${targetId}`,
+    actor: { id: followerId },
+  });
+
   return {
     following: true,
     followerCount: targetDoc.followerCount,
@@ -174,6 +186,13 @@ async function unfollow(targetId, followerId) {
   };
 }
 
+/** Store (or clear, with null/'') the Expo push token - Phase 11 step 80. */
+async function setPushToken(userId, token) {
+  const value = token || '';
+  await User.updateOne({ _id: userId }, { $set: { pushToken: value } });
+  return { pushToken: value };
+}
+
 module.exports = {
   getProfile,
   getMe,
@@ -181,4 +200,5 @@ module.exports = {
   uploadProfilePhoto,
   follow,
   unfollow,
+  setPushToken,
 };

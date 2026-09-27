@@ -8,6 +8,7 @@ const poemService = require('../poems/poem.service');
 const poemRepo = require('../poems/poem.repository');
 const diaryService = require('../diary/diary.service');
 const engagementRepo = require('./engagement.repository');
+const notificationsDispatcher = require('../notifications/notifications.dispatcher');
 
 /**
  * Engagement service (plan steps 45–49):
@@ -63,6 +64,27 @@ function assertScore(score) {
       ],
     });
   }
+}
+
+/**
+ * Fire-and-forget engagement notification (Phase 11 step 79). Never awaited,
+ * never throws - dispatchNotification folds all failures into a logged
+ * `{queued:false}` result, so a notification hiccup cannot affect the write.
+ * Skips self-actions and anonymous actors (actor=null → "Someone" phrase).
+ */
+function dispatchEngagementNotification({ type, target, targetType, eventKey, actor, requesterId }) {
+  const recipientId = target?.authorId;
+  if (!recipientId) return;
+  // self-actions never notify (guard uses requesterId: actor is null when anonymous)
+  if (String(recipientId) === String(requesterId ?? actor?.id ?? '')) return;
+  notificationsDispatcher.dispatchNotification({
+    recipientId,
+    type,
+    relatedType: targetType,
+    relatedId: target._id,
+    eventKey,
+    actor,
+  });
 }
 
 function serializeReaction(doc) {
@@ -149,6 +171,16 @@ async function addReaction(targetType, targetId, user, body) {
 
   const stats = await incStats(targetType, target._id, { reactionCount: 1 });
   logger.info({ targetType, targetId: String(target._id), userId: user.id, type: body.type }, 'reaction added');
+  dispatchEngagementNotification({
+    type: 'reaction',
+    target,
+    targetType,
+    eventKey: `reaction:${doc._id}`,
+    requesterId: user.id,
+    actor: body.anonymous
+      ? null
+      : { id: user.id, displayName: user.displayName, username: user.username },
+  });
   return { reaction: serializeReaction(doc), stats };
 }
 
@@ -295,6 +327,16 @@ async function createComment(user, body) {
     await incStats(body.targetType, target._id, { commentCount: 1 });
   }
   logger.info({ commentId: String(doc._id), userId: user.id }, 'comment created');
+  dispatchEngagementNotification({
+    type: 'comment',
+    target,
+    targetType: body.targetType,
+    eventKey: `comment:${doc._id}`,
+    requesterId: user.id,
+    actor: doc.anonymous
+      ? null
+      : { id: user.id, displayName: user.displayName, username: user.username },
+  });
   // requester identity from loadUser is enough to render the new row at once
   const authorLite = user.username
     ? {

@@ -5,7 +5,7 @@ const multer = require('multer');
 const { validate } = require('../../middleware/validate');
 const { requireAuth, optionalAuth, loadUser, loadUserOptional } = require('../../middleware/auth');
 const { ValidationError } = require('../../errors');
-const { updateProfileSchema } = require('./user.schemas');
+const { updateProfileSchema, pushTokenSchema } = require('./user.schemas');
 const {
   idParamSchema,
   authorStoriesQuerySchema,
@@ -54,6 +54,14 @@ function uploadSingle(mw) {
 router.get('/me', requireAuth, loadUser, controller.getMe);
 router.patch('/me', requireAuth, loadUser, validate({ body: updateProfileSchema }), controller.updateMe);
 router.post('/me/photo', requireAuth, loadUser, uploadSingle(upload.single('photo')), controller.uploadPhoto);
+// Push token registration (Phase 11 step 80) - null clears (turned off)
+router.put(
+  '/me/push-token',
+  requireAuth,
+  loadUser,
+  validate({ body: pushTokenSchema }),
+  controller.setPushToken,
+);
 
 router.get('/:id', optionalAuth, controller.getProfile);
 // Profile story list (plan 41B) — lives in the stories module, routed under

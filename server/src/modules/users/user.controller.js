@@ -19,6 +19,10 @@ const uploadPhoto = asyncHandler(async (req, res) => {
   ok(res, await userService.uploadProfilePhoto(req.user.id, req.file));
 });
 
+const setPushToken = asyncHandler(async (req, res) => {
+  ok(res, await userService.setPushToken(req.user.id, req.body.token));
+});
+
 const getProfile = asyncHandler(async (req, res) => {
   ok(res, await userService.getProfile(req.params.id, req.user));
 });
@@ -31,4 +35,4 @@ const unfollow = asyncHandler(async (req, res) => {
   ok(res, await userService.unfollow(req.params.id, req.user.id));
 });
 
-module.exports = { getMe, updateMe, uploadPhoto, getProfile, follow, unfollow };
+module.exports = { getMe, updateMe, uploadPhoto, setPushToken, getProfile, follow, unfollow };

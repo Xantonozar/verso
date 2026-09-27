@@ -5,6 +5,7 @@ const { Duel } = require('./duel.model');
 const { DuelVote } = require('./duel-vote.model');
 const { Poem } = require('../poems/poem.model');
 const { getPoem } = require('../poems/poem.service');
+const notificationsDispatcher = require('../notifications/notifications.dispatcher');
 
 /**
  * Duel service (plan step 68):
@@ -124,6 +125,8 @@ async function getDuel(id, user) {
     ? await DuelVote.findOne({ duelId: duel._id, userId: user.id }).lean()
     : null;
 
+  dispatchDuelResults(duel);
+
   return {
     ...serialize(duel),
     poemA,
@@ -169,7 +172,30 @@ async function vote(id, user, { votedFor }) {
   }
 
   const updated = await Duel.findById(id).lean();
+  dispatchDuelResults(updated);
   return { ...serialize(updated), myVote: votedFor };
 }
 
-module.exports = { createDuel, listDuels, getDuel, vote, effectiveStatus };
+/**
+ * Duel result notifications (Phase 11 step 79). The deadline-derived design
+ * has no close event, so this is dispatched from the read path (GET a closed
+ * duel) and from a vote that lands after the deadline — both observed closures.
+ * eventKey is per (duel, poet), so repeat observations are no-ops at the
+ * queue, worker, and index layers. Never throws.
+ */
+function dispatchDuelResults(duel) {
+  if (effectiveStatus(duel) !== 'closed') return { dispatched: false };
+  for (const poetId of [duel.poetAId, duel.poetBId]) {
+    notificationsDispatcher.dispatchNotification({
+      recipientId: poetId,
+      type: 'duel_result',
+      relatedType: 'duel',
+      relatedId: duel._id,
+      eventKey: `duel_result:${duel._id}:${poetId}`,
+      actor: null,
+    });
+  }
+  return { dispatched: true };
+}
+
+module.exports = { createDuel, listDuels, getDuel, vote, effectiveStatus, dispatchDuelResults };

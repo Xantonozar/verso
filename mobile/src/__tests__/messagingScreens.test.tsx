@@ -343,6 +343,25 @@ describe('navigation entries (plan step 76)', () => {
     expect(router.push).toHaveBeenCalledWith('/messages');
   });
 
+  test('profile shows a Notifications button that opens the inbox (plan step 81)', async () => {
+    apiMock.get.mockResolvedValue({
+      data: {
+        id: 'u1',
+        username: 'author',
+        displayName: 'Author Name',
+        email: 'author@example.com',
+        bio: '',
+        profilePhotoUrl: '',
+        followerCount: 0,
+        followingCount: 0,
+      },
+    });
+    await render(<ProfileScreen />);
+
+    await fireEvent.press(await screen.findByTestId('open-notifications'));
+    expect(router.push).toHaveBeenCalledWith('/notifications');
+  });
+
   test('other-user profile Message button starts the thread and opens chat', async () => {
     apiMock.get.mockResolvedValue({
       data: {

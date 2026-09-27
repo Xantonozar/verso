@@ -8,6 +8,11 @@ const { connectRedis, disconnectRedis } = require('./config/redis');
 const { configureCloudinary } = require('./config/cloudinary');
 const { createSocketServer } = require('./sockets');
 const { scheduleTrending, stopTrending } = require('./jobs/trending');
+const {
+  startNotificationsWorker,
+  stopNotificationsWorker,
+} = require('./jobs/notifications');
+const { closeDispatcher } = require('./modules/notifications/notifications.dispatcher');
 const { logger } = require('./config/logger');
 
 async function main() {
@@ -49,6 +54,20 @@ async function main() {
 
   configureCloudinary();
 
+  // Notification worker (Phase 11 step 79) - skipped entirely when Redis is
+  // down; dispatchNotification degrades the same way (API stays up).
+  try {
+    const w = startNotificationsWorker();
+    if (w.started) {
+      logger.info({ event: 'notifications:worker', started: true }, 'Notification worker up');
+    }
+  } catch (err) {
+    logger.warn(
+      { event: 'notifications:worker-failed', err: err.message },
+      'Notification worker failed to start - notifications resume when Redis returns',
+    );
+  }
+
   const app = createApp();
   const server = http.createServer(app);
   const io = createSocketServer(server, { corsOrigins: process.env.CORS_ORIGINS || '*' });
@@ -61,6 +80,8 @@ async function main() {
     logger.info({ event: 'server:shutdown', signal }, 'Shutting down');
     io.close();
     await stopTrending();
+    await stopNotificationsWorker();
+    await closeDispatcher();
     server.close(async () => {
       await disconnectRedis();
       await disconnectMongo();
