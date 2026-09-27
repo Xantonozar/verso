@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { PoemEditor } from '../components/PoemEditor';
 import NewPoemScreen from '../app/(app)/poem/new';
 import EditPoemScreen from '../app/(app)/poem/[id]/edit';
@@ -426,5 +426,15 @@ describe('poem reader — states', () => {
     await render(<PoemReaderScreen />);
     expect(await screen.findByText('Anonymous')).toBeTruthy();
     expect(screen.queryByTestId('edit-poem')).toBeNull();
+  });
+
+  it('fires a best-effort read ping on mount (plan step 82)', async () => {
+    apiMock.get.mockResolvedValue({ data: bffFixture(poemFixture) });
+    apiMock.post.mockResolvedValue(undefined);
+
+    await render(<PoemReaderScreen />);
+    await screen.findByText('First light');
+
+    await waitFor(() => expect(apiMock.post).toHaveBeenCalledWith('/poems/p1/read'));
   });
 });

@@ -3,6 +3,7 @@
 const { asyncHandler } = require('../../middleware/asyncHandler');
 const { ok, created } = require('../../middleware/respond');
 const poemService = require('./poem.service');
+const analyticsService = require('../analytics/analytics.service');
 
 /**
  * Poem controllers — thin per §2 (parse → service → respond).
@@ -44,4 +45,21 @@ const unpublish = asyncHandler(async (req, res) => {
   ok(res, await poemService.unpublishPoem(req.params.id, req.user));
 });
 
-module.exports = { create, get, update, remove, versions, autosave, publish, unpublish, mine };
+// Reading-activity logging (plan step 82): visibility check runs inline,
+// the analytics write itself is queued (never synchronous on the read).
+const read = asyncHandler(async (req, res) => {
+  ok(res, await analyticsService.logReadingActivity(req.params.id, req.user));
+});
+
+module.exports = {
+  create,
+  get,
+  update,
+  remove,
+  versions,
+  autosave,
+  publish,
+  unpublish,
+  mine,
+  read,
+};

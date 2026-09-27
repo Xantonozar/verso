@@ -65,6 +65,7 @@ function createApp() {
   const { remixRouter } = require('./modules/remixes/remix.routes');
   const { messagingRouter } = require('./modules/messaging/messaging.routes');
   const { notificationsRouter } = require('./modules/notifications/notifications.routes');
+  const { analyticsRouter } = require('./modules/analytics/analytics.routes');
   app.use(`${API_PREFIX}/auth`, authRouter);
   app.use(`${API_PREFIX}/users`, userRouter);
   app.use(`${API_PREFIX}/poems`, poemRouter);
@@ -94,6 +95,8 @@ function createApp() {
   // Messaging (Phase 10, plan steps 72-74): /conversations* DM surface
   app.use(`${API_PREFIX}/conversations`, messagingRouter);
   app.use(`${API_PREFIX}/notifications`, notificationsRouter);
+  // Writer analytics dashboard (Phase 12, plan step 83): GET /analytics/writer
+  app.use(`${API_PREFIX}/analytics`, analyticsRouter);
 
   // Health probe (load balancer / deploy checks)
   app.get('/health', (req, res) => {

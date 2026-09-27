@@ -13,6 +13,8 @@ const {
   stopNotificationsWorker,
 } = require('./jobs/notifications');
 const { closeDispatcher } = require('./modules/notifications/notifications.dispatcher');
+const { startAnalyticsWorker, stopAnalyticsWorker } = require('./jobs/analytics');
+const { closeAnalyticsDispatcher } = require('./modules/analytics/analytics.dispatcher');
 const { logger } = require('./config/logger');
 
 async function main() {
@@ -68,6 +70,19 @@ async function main() {
     );
   }
 
+  // Reading-activity worker (Phase 12 step 82) - same degradation contract.
+  try {
+    const w = startAnalyticsWorker();
+    if (w.started) {
+      logger.info({ event: 'analytics:worker', started: true }, 'Analytics worker up');
+    }
+  } catch (err) {
+    logger.warn(
+      { event: 'analytics:worker-failed', err: err.message },
+      'Analytics worker failed to start - reads resume counting when Redis returns',
+    );
+  }
+
   const app = createApp();
   const server = http.createServer(app);
   const io = createSocketServer(server, { corsOrigins: process.env.CORS_ORIGINS || '*' });
@@ -82,6 +97,8 @@ async function main() {
     await stopTrending();
     await stopNotificationsWorker();
     await closeDispatcher();
+    await stopAnalyticsWorker();
+    await closeAnalyticsDispatcher();
     server.close(async () => {
       await disconnectRedis();
       await disconnectMongo();

@@ -15,6 +15,8 @@ const followSchema = createSchema({
 
 followSchema.index({ followerId: 1, followingId: 1 }, { unique: true });
 followSchema.index({ followingId: 1 });
+// follower-growth series (Phase 12 dashboard) - date range within an author
+followSchema.index({ followingId: 1, createdAt: -1 });
 
 const Follow = mongoose.model('Follow', followSchema);
 

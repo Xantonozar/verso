@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../../components/Button';
@@ -11,6 +11,7 @@ import { EmptyState } from '../../../components/EmptyState';
 import { ErrorState } from '../../../components/ErrorState';
 import { LoadingState } from '../../../components/LoadingState';
 import { useAuth } from '../../../context/AuthContext';
+import { recordPoemRead } from '../../../lib/api/analytics';
 import { ApiError } from '../../../lib/api/client';
 import {
   addPoemToCollection,
@@ -59,6 +60,18 @@ export default function PoemReaderScreen() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const fetchPoem = useCallback(async (): Promise<MobilePoemResponse> => getMobilePoem(id), [id]);
+
+  // Best-effort read ping (Phase 12, plan step 82): fire once per poem id,
+  // never awaited, never retried — the server visibility-checks and queues
+  // the analytics write itself. The ref guards React's double-effect pass.
+  const readRecordedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!id || readRecordedRef.current === id) return;
+    readRecordedRef.current = id;
+    recordPoemRead(String(id)).catch(() => {
+      // analytics never interrupt reading
+    });
+  }, [id]);
 
   useEffect(() => {
     let cancelled = false;

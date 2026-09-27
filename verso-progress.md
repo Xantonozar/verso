@@ -5,7 +5,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 11 complete — STOPPED for user review (Phase 12: Analytics next); server + mobile pushed to Xantonozar/verso
+**Current status:** Phase 12 complete — STOPPED for user review (Phase 13: Reading Streaks next); server + mobile pushed to Xantonozar/verso
 **Last updated:** 2026-09-28
 
 ---
@@ -207,11 +207,11 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 12 — Analytics
 
-- [ ] 12.1 Reading-activity logging endpoint (queued, never synchronous)
-- [ ] 12.2 Writer analytics aggregation (profiled: job vs on-demand)
-- [ ] 12.3 Mobile: writer dashboard (loading state, new-writer empty state)
+- [x] 12.1 Reading-activity logging endpoint (queued, never synchronous) - `POST /poems/:id/read` (optionalAuth + fail-closed `canView` 404) → `analytics.dispatcher` deterministic jobId=eventKey; `jobs/analytics.js` worker inserts + `$inc stats.reads` (insert gates the bump, §8.15), skips vanished/removed/self-reads; Redis-down → 200 `{queued:false}`
+- [x] 12.2 Writer analytics aggregation (profiled: job vs on-demand) - `GET /analytics/writer` on-demand (explain profiled → indexed ms-range query beats queue+staleness at expected volume; revisit at p95 budget): reads/reactions/comments/saves/follower growth per day, zero-filled buckets, all-time totals; string-id `$match` in pipelines must be ObjectId-cast (mongoose doesn't cast aggregates - bucket tests caught it); indexes `readingactivities {authorId,createdAt}`, `follows {followingId,createdAt}`, `saves {poemId,createdAt}`
+- [x] 12.3 Mobile: writer dashboard (loading state, new-writer empty state) - `(app)/analytics.tsx` (heavy-query loading, totals grid, newest-first day rows, quiet-window note, error+retry) + profile button + `lib/api/analytics.ts`; reader fires best-effort `recordPoemRead` once per mount; 7 screen tests
 
-**Phase 12 gate:** aggregation `explain("executionStats")` recorded.
+**Phase 12 gate:** aggregation `explain("executionStats")` recorded - IXSCAN on `authorId_1_createdAt_-1`, no COLLSCAN; server **541/541** (49 suites) + eslint 0; mobile **173/173** + tsc/lint 0.
 
 ---
 

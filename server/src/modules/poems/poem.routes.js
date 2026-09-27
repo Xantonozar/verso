@@ -52,5 +52,14 @@ router.put(
 // publish lifecycle — deferred from Phase 2 (user decision), mirrors stories
 router.post('/:id/publish', requireAuth, loadUser, validate({ params: idParamSchema }), controller.publish);
 router.delete('/:id/publish', requireAuth, loadUser, validate({ params: idParamSchema }), controller.unpublish);
+// Reading activity (plan step 82): optionalAuth - public/unlisted poems are
+// read anonymously too; the analytics write is queued, never synchronous.
+router.post(
+  '/:id/read',
+  optionalAuth,
+  loadUserOptional,
+  validate({ params: idParamSchema }),
+  controller.read,
+);
 
 module.exports = { poemRouter: router };

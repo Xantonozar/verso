@@ -28,6 +28,13 @@ jest.mock('../lib/api/client', () => {
   };
 });
 
+// The reader fires a best-effort read ping on mount (Phase 12, plan step 82);
+// mock it here so it never pollutes api.post call assertions below.
+jest.mock('../lib/api/analytics', () => ({
+  recordPoemRead: jest.fn().mockResolvedValue(undefined),
+  getWriterAnalytics: jest.fn(),
+}));
+
 jest.mock('../context/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
   useAuth: () => ({

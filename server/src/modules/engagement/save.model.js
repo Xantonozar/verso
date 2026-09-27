@@ -16,6 +16,8 @@ const saveSchema = createSchema({
 
 // §4 unique constraint
 saveSchema.index({ userId: 1, poemId: 1 }, { unique: true });
+// saves-per-poem time series (Phase 12 dashboard aggregation)
+saveSchema.index({ poemId: 1, createdAt: -1 });
 
 const Save = mongoose.model('Save', saveSchema);
 

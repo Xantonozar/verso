@@ -81,4 +81,13 @@ module.exports = [
   // messages index above: { conversationId: 1, createdAt: -1 } (§4)
   // unread counts per conversation in the inbox
   { collection: 'messages', key: { conversationId: 1, senderId: 1, readAt: 1 } },
+
+  // analytics (Phase 12 — plan steps 82-83)
+  // idempotent worker insert: one counted read per eventKey, ever (§8.15)
+  { collection: 'readingactivities', key: { eventKey: 1 }, options: { unique: true } },
+  // writer dashboard reads series — author range, newest first
+  { collection: 'readingactivities', key: { authorId: 1, createdAt: -1 } },
+  // follower-growth series (dashboard) + saves-per-poem series
+  { collection: 'follows', key: { followingId: 1, createdAt: -1 } },
+  { collection: 'saves', key: { poemId: 1, createdAt: -1 } },
 ];

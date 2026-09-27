@@ -362,6 +362,25 @@ describe('navigation entries (plan step 76)', () => {
     expect(router.push).toHaveBeenCalledWith('/notifications');
   });
 
+  test('profile shows an Analytics button that opens the dashboard (plan step 84)', async () => {
+    apiMock.get.mockResolvedValue({
+      data: {
+        id: 'u1',
+        username: 'author',
+        displayName: 'Author Name',
+        email: 'author@example.com',
+        bio: '',
+        profilePhotoUrl: '',
+        followerCount: 0,
+        followingCount: 0,
+      },
+    });
+    await render(<ProfileScreen />);
+
+    await fireEvent.press(await screen.findByTestId('open-analytics'));
+    expect(router.push).toHaveBeenCalledWith('/analytics');
+  });
+
   test('other-user profile Message button starts the thread and opens chat', async () => {
     apiMock.get.mockResolvedValue({
       data: {
