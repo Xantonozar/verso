@@ -7,6 +7,7 @@ import { ErrorState } from '../../../components/ErrorState';
 import { LoadingState } from '../../../components/LoadingState';
 import { useAuth } from '../../../context/AuthContext';
 import api, { ApiError } from '../../../lib/api/client';
+import { createConversation } from '../../../lib/api/messaging';
 import { toast } from '../../../lib/toast';
 import { CONNECTIVITY_TOAST, isConnectivityError } from '../../../lib/validation';
 import { colors, layout, radii, spacing, typography } from '../../../theme/tokens';
@@ -36,6 +37,7 @@ export default function UserProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<'gone' | 'other' | null>(null);
   const [pending, setPending] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [optimistic, setOptimistic] = useState<{
     following: boolean;
     followerCount: number;
@@ -117,6 +119,28 @@ export default function UserProfileScreen() {
     }
   }
 
+  /** Get-or-create the DM thread, then open it (plan step 76). */
+  async function startConversation() {
+    if (!profile || starting) return;
+    setStarting(true);
+    try {
+      const conversation = await createConversation(profile.id);
+      router.push({
+        pathname: '/chat/[id]',
+        params: {
+          id: conversation.id,
+          other: profile.displayName,
+          anon: conversation.isAnonymous ? '1' : '0',
+        },
+      });
+    } catch (err) {
+      if (isConnectivityError(err)) toast.error(CONNECTIVITY_TOAST);
+      else toast.error("Couldn't open the conversation. Please try again.");
+    } finally {
+      setStarting(false);
+    }
+  }
+
   if (user && id && user.id === id) return <Redirect href="/profile" />;
   if (loading) return <LoadingState label="Loading profile..." />;
   if (loadError === 'gone') {
@@ -172,6 +196,13 @@ export default function UserProfileScreen() {
             onPress={toggleFollow}
             disabled={pending}
             testID="follow-button"
+          />
+          <Button
+            label="Message"
+            variant="secondary"
+            onPress={startConversation}
+            disabled={starting}
+            testID="message-user"
           />
         </View>
       </ScrollView>

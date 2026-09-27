@@ -63,6 +63,7 @@ function createApp() {
   const { duelRouter } = require('./modules/duels/duel.routes');
   const { promptRouter } = require('./modules/prompts/prompt.routes');
   const { remixRouter } = require('./modules/remixes/remix.routes');
+  const { messagingRouter } = require('./modules/messaging/messaging.routes');
   app.use(`${API_PREFIX}/auth`, authRouter);
   app.use(`${API_PREFIX}/users`, userRouter);
   app.use(`${API_PREFIX}/poems`, poemRouter);
@@ -88,6 +89,9 @@ function createApp() {
   app.use(`${API_PREFIX}/duels`, duelRouter);
   app.use(`${API_PREFIX}/prompts`, promptRouter);
   app.use(`${API_PREFIX}/remixes`, remixRouter);
+
+  // Messaging (Phase 10, plan steps 72-74): /conversations* DM surface
+  app.use(`${API_PREFIX}/conversations`, messagingRouter);
 
   // Health probe (load balancer / deploy checks)
   app.get('/health', (req, res) => {

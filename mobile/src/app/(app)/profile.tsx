@@ -288,6 +288,12 @@ export default function ProfileScreen() {
                 onPress={() => router.push('/prompt')}
                 testID="open-prompt"
               />
+              <Button
+                label="Messages"
+                variant="secondary"
+                onPress={() => router.push('/messages')}
+                testID="open-messages"
+              />
               <Button label="Edit profile" variant="secondary" onPress={startEditing} testID="edit-profile" />
               <Button
                 label={uploading ? `Uploading… ${uploadProgress}%` : 'Change photo'}

@@ -5,8 +5,8 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 9 complete — STOPPED for user review (Phase 10: Messaging next); server + mobile pushed to Xantonozar/verso
-**Last updated:** 2026-09-27
+**Current status:** Phase 10 complete — STOPPED for user review (Phase 11: Notifications next); server + mobile pushed to Xantonozar/verso
+**Last updated:** 2026-09-28
 
 ---
 
@@ -182,14 +182,14 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 10 — Messaging
 
-- [ ] 10.1 Conversation + Message models
-- [ ] 10.2 Socket.io handlers + JWT connection auth + logging
-- [ ] 10.3 REST history (cursor pagination)
-- [ ] 10.4 Anonymous DM flag honored in BOTH REST and socket payloads (test both)
-- [ ] 10.5 Mobile: DM inbox + chat (pending/sent/failed state, retry, anonymous toggle)
-- [ ] 10.6 Offline-delivery test: socket message while offline appears via REST on next load
+- [x] 10.1 Conversation + Message models - `server/src/modules/messaging/{conversation,message}.model.js`: unique `pairKey` (sorted participant ids - avoids unique-index per-element collision), `participantIds` + `lastMessageAt` for inbox query, `{conversationId,createdAt:-1}` message index
+- [x] 10.2 Socket.io handlers + JWT connection auth + logging - `sockets/index.js`: auto-join `user:{id}` room, `message:send`/`message:read` (zod-validated, ack `{ok,...}`), server→client `message:new`/`message:read`, logs `socket:message-sent`/`socket:message-rejected`; `sockets/registry.js` breaks require cycle
+- [x] 10.3 REST history (cursor pagination) - `GET /conversations`, `GET /conversations/:id/messages?cursor&limit` (≤100), `POST /conversations/:id/messages`, `POST /conversations` get-or-create; single `serializeMessage` shared by REST + socket; non-participant → 404 `CONVERSATION_NOT_FOUND`
+- [x] 10.4 Anonymous DM flag honored in BOTH REST and socket payloads (test both) - `senderId`/`sender` nulled when msg or thread anonymous; anonymous `message:read` receipt omits `readerId`
+- [x] 10.5 Mobile: DM inbox + chat (pending/sent/failed state, retry, anonymous toggle) - `messages.tsx` + `chat/[id].tsx` + `lib/api/messaging.ts`; optimistic pending/sent/failed + retry, anon toggle (hidden + forced in anon threads), `profile` Messages entry, other-user `Message` button (get-or-create → chat)
+- [x] 10.6 Offline-delivery test: socket message while offline appears via REST on next load - `tests/messaging/messaging.test.js` sends via socket A, disconnects, REST history on B returns it (19 messaging tests)
 
-**Phase 10 gate:** 10.4 + 10.6 green; `explain()` on message history.
+**Phase 10 gate:** 10.4 + 10.6 green; `explain()` IXSCAN on `conversationId_1_createdAt_-1` (no COLLSCAN); server **488/488** + eslint 0; mobile **155/155** + tsc/lint 0.
 
 ---
 

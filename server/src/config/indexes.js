@@ -69,4 +69,14 @@ module.exports = [
   // attribution edge — at most one link per (original, remix) pair
   { collection: 'remixes', key: { originalPoemId: 1, remixPoemId: 1 }, options: { unique: true } },
   { collection: 'remixes', key: { remixPoemId: 1 } },
+
+  // messaging (Phase 10 — plan steps 72-74, §3.19/§4)
+  // one thread per user pair (sorted ids; scalar key — a unique multikey
+  // index on the array itself would enforce uniqueness per ELEMENT)
+  { collection: 'conversations', key: { pairKey: 1 }, options: { unique: true } },
+  // inbox listing: my threads, newest activity first
+  { collection: 'conversations', key: { participantIds: 1, lastMessageAt: -1 } },
+  // messages index above: { conversationId: 1, createdAt: -1 } (§4)
+  // unread counts per conversation in the inbox
+  { collection: 'messages', key: { conversationId: 1, senderId: 1, readAt: 1 } },
 ];
