@@ -103,6 +103,8 @@ export interface CreateCommentInput {
   targetId: string;
   content: string;
   parentCommentId?: string;
+  /** Omitted when false — the server default keeps payloads minimal. */
+  anonymous?: boolean;
 }
 
 export async function getMobilePoem(id: string): Promise<MobilePoemResponse> {
@@ -113,8 +115,12 @@ export async function getMobilePoem(id: string): Promise<MobilePoemResponse> {
 export async function addReaction(
   id: string,
   type: ReactionType,
+  options?: { anonymous?: boolean },
 ): Promise<ReactionResult> {
-  const { data } = await api.post<ReactionResult>(`/poems/${id}/reactions`, { type });
+  const { data } = await api.post<ReactionResult>(`/poems/${id}/reactions`, {
+    type,
+    ...(options?.anonymous ? { anonymous: true } : {}),
+  });
   return data;
 }
 

@@ -59,7 +59,8 @@ function serializeAuthor(user) {
 
 /**
  * Anonymous entries hide their author id/name from everyone except the owner
- * and moderators (mirrors the poem rule; full anonymity hardening is Phase 7).
+ * and moderators (mirrors the poem rule; asserted by
+ * tests/anonymous/anonymity.test.js).
  */
 function serialize(entry, author = null, requester = null) {
   const viewerIsAuthor = requester?.id != null && String(entry.authorId) === String(requester.id);

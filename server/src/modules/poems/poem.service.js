@@ -30,6 +30,8 @@ const UPDATABLE_FIELDS = [
   'tags',
   'visibility',
   'anonymous',
+  'isUnsentPoem',
+  'unsentRecipientLabel',
 ];
 
 const notFound = () => new NotFoundError('Poem not found', { code: 'POEM_NOT_FOUND' });
@@ -55,6 +57,8 @@ function serialize(poem, author = null) {
     tags: poem.tags || [],
     visibility: poem.visibility,
     anonymous: Boolean(poem.anonymous),
+    isUnsentPoem: Boolean(poem.isUnsentPoem),
+    unsentRecipientLabel: poem.unsentRecipientLabel || '',
     status: poem.status,
     currentVersionId: poem.currentVersionId ? String(poem.currentVersionId) : null,
     draftSavedAt: poem.draftSavedAt || null,
@@ -80,6 +84,8 @@ async function createPoem(authorId, input) {
     tags: input.tags ?? [],
     visibility: input.visibility ?? 'private_draft',
     anonymous: input.anonymous ?? false,
+    isUnsentPoem: input.isUnsentPoem ?? false,
+    unsentRecipientLabel: input.unsentRecipientLabel ?? '',
     status: 'draft',
   });
 
@@ -130,8 +136,8 @@ async function getPoem(poemId, requester) {
     if (doc) author = serializeAuthor(doc);
   }
   const out = serialize(poem, author);
-  // Anonymous poems must not leak the real author through `authorId` either —
-  // full anonymity hardening is Phase 7, but the id can't slip through now.
+  // Anonymous poems must never leak the real author through `authorId` either —
+  // both strips are asserted by tests/anonymous/anonymity.test.js (Phase 7).
   if (hideIdentity) delete out.authorId;
   return out;
 }
@@ -144,6 +150,26 @@ async function updatePoem(poemId, user, patch) {
   const fields = {};
   for (const key of UPDATABLE_FIELDS) {
     if (patch[key] !== undefined) fields[key] = patch[key];
+  }
+
+  // Unsent coherence (plan step 61): the recipient label only makes sense
+  // while the flag is on — flipping it off clears a stale label, and a label
+  // supplied while the flag stays off is a 400 (matches the create rule).
+  const effectiveUnsent =
+    fields.isUnsentPoem !== undefined ? fields.isUnsentPoem : poem.isUnsentPoem;
+  if (fields.isUnsentPoem === false && fields.unsentRecipientLabel === undefined) {
+    fields.unsentRecipientLabel = '';
+  }
+  if (fields.unsentRecipientLabel && !effectiveUnsent) {
+    throw new ValidationError('Unsent recipient label requires isUnsentPoem', {
+      details: [
+        {
+          field: 'unsentRecipientLabel',
+          message: 'requires isUnsentPoem to be true',
+          code: 'custom',
+        },
+      ],
+    });
   }
 
   // Explicit save snapshots title/content into history (step 37); metadata-only

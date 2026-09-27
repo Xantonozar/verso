@@ -30,6 +30,8 @@ export interface Poem {
   tags?: string[];
   visibility: PoemVisibility;
   anonymous: boolean;
+  isUnsentPoem?: boolean;
+  unsentRecipientLabel?: string;
   status: PoemStatus;
   currentVersionId?: string | null;
   draftSavedAt?: string | null;
@@ -51,6 +53,8 @@ export interface CreatePoemInput {
   tags?: string[];
   visibility?: PoemVisibility;
   anonymous?: boolean;
+  isUnsentPoem?: boolean;
+  unsentRecipientLabel?: string;
 }
 
 /** Allow-list the server's updatePoemSchema accepts — never status/stats/authorId. */

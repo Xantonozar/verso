@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { ApiError } from '../lib/api/client';
 import {
+  CreatePoemInput,
   Poem,
+  UpdatePoemInput,
   autosaveDraft,
   createPoem,
   updatePoem,
@@ -23,8 +25,10 @@ import {
   splitFieldErrors,
 } from '../lib/validation';
 import { colors, radii, spacing, typography } from '../theme/tokens';
+import { AnonymityExplainer } from './AnonymityExplainer';
 import { Button } from './Button';
 import { TextField } from './TextField';
+import { ToggleRow } from './ToggleRow';
 
 const DEFAULT_AUTOSAVE_DEBOUNCE_MS = 2000;
 const LOCAL_DRAFT_DEBOUNCE_MS = 400;
@@ -46,6 +50,9 @@ export function PoemEditor({ poem, onCreated, onSaved, autosaveDebounceMs }: Pro
 
   const [title, setTitle] = useState(poem?.title ?? '');
   const [content, setContent] = useState(poem?.content ?? '');
+  const [anonymous, setAnonymous] = useState(poem?.anonymous ?? false);
+  const [isUnsentPoem, setIsUnsentPoem] = useState(poem?.isUnsentPoem ?? false);
+  const [unsentLabel, setUnsentLabel] = useState(poem?.unsentRecipientLabel ?? '');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -187,9 +194,18 @@ export function PoemEditor({ poem, onCreated, onSaved, autosaveDebounceMs }: Pro
     setSaving(true);
     try {
       if (poem) {
-        const payload = { title: title.trim(), content };
+        const nextTitle = title.trim();
+        const payload: UpdatePoemInput = { title: nextTitle, content };
+        // Only send anonymous/unsent when they changed — steady-state saves
+        // stay minimal, while toggling either one off still travels.
+        if (anonymous !== (poem.anonymous ?? false)) payload.anonymous = anonymous;
+        const wasUnsent = poem.isUnsentPoem ?? false;
+        if (wasUnsent || isUnsentPoem) {
+          payload.isUnsentPoem = isUnsentPoem;
+          if (isUnsentPoem) payload.unsentRecipientLabel = unsentLabel.trim();
+        }
         const updated = await updatePoem(poem.id, payload);
-        baselineRef.current = { ...payload };
+        baselineRef.current = { title: nextTitle, content };
         if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
         clearedRef.current = true;
         void clearLocalDraft(draftKey);
@@ -197,7 +213,13 @@ export function PoemEditor({ poem, onCreated, onSaved, autosaveDebounceMs }: Pro
         toast.success('Saved');
         onSaved(updated);
       } else {
-        const created = await createPoem({ title: title.trim(), content });
+        const input: CreatePoemInput = { title: title.trim(), content };
+        if (anonymous) input.anonymous = true;
+        if (isUnsentPoem) {
+          input.isUnsentPoem = true;
+          input.unsentRecipientLabel = unsentLabel.trim();
+        }
+        const created = await createPoem(input);
         clearedRef.current = true;
         void clearLocalDraft(draftKey);
         toast.success('Draft saved');
@@ -283,6 +305,32 @@ export function PoemEditor({ poem, onCreated, onSaved, autosaveDebounceMs }: Pro
           </Text>
         ) : null}
       </View>
+
+      <ToggleRow
+        value={anonymous}
+        onValueChange={setAnonymous}
+        label="Post anonymously"
+        testID="poem-anonymous"
+      >
+        <AnonymityExplainer />
+      </ToggleRow>
+
+      <ToggleRow
+        value={isUnsentPoem}
+        onValueChange={setIsUnsentPoem}
+        label="Unsent poem"
+        hint="A poem you never sent to someone."
+        testID="poem-unsent"
+      >
+        <TextField
+          label="Recipient (optional)"
+          value={unsentLabel}
+          onChangeText={setUnsentLabel}
+          error={fieldErrors.unsentRecipientLabel}
+          placeholder="Who was it for?"
+          testID="unsent-recipient-label"
+        />
+      </ToggleRow>
 
       <View style={styles.metaRow}>
         <Text style={styles.counter} testID="poem-counter">

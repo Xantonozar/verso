@@ -10,6 +10,8 @@ import {
 } from '../../lib/api/engagement';
 import { toast } from '../../lib/toast';
 import { colors, layout, radii, spacing, typography } from '../../theme/tokens';
+import { AnonymityExplainer } from '../AnonymityExplainer';
+import { ToggleRow } from '../ToggleRow';
 
 interface Props {
   poemId: string;
@@ -28,6 +30,7 @@ export function ReactionBar({ poemId, counts, active, interactive }: Props) {
   const [selected, setSelected] = useState<Set<ReactionType>>(new Set(active));
   const [localCounts, setLocalCounts] = useState<ReactionCounts>({ ...counts });
   const [pending, setPending] = useState<Set<ReactionType>>(new Set());
+  const [anonymous, setAnonymous] = useState(false);
 
   const has = (type: ReactionType) => selected.has(type);
   const countOf = (type: ReactionType) => localCounts[type] ?? 0;
@@ -51,7 +54,7 @@ export function ReactionBar({ poemId, counts, active, interactive }: Props) {
 
     try {
       if (turningOn) {
-        await addReaction(poemId, type);
+        await addReaction(poemId, type, { anonymous });
       } else {
         await removeReaction(poemId, type);
       }
@@ -112,6 +115,16 @@ export function ReactionBar({ poemId, counts, active, interactive }: Props) {
           );
         })}
       </View>
+      {interactive ? (
+        <ToggleRow
+          value={anonymous}
+          onValueChange={setAnonymous}
+          label="React anonymously"
+          testID="reaction-anonymous"
+        >
+          <AnonymityExplainer />
+        </ToggleRow>
+      ) : null}
     </View>
   );
 }

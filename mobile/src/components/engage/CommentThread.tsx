@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { AnonymityExplainer } from '../AnonymityExplainer';
 import { Button } from '../Button';
 import { EmptyState } from '../EmptyState';
 import { TextField } from '../TextField';
+import { ToggleRow } from '../ToggleRow';
 import {
   Comment,
   createComment,
@@ -54,6 +56,7 @@ export function CommentThread({ poemId, interactive, currentUserId, commentCount
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [text, setText] = useState('');
+  const [anonymous, setAnonymous] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
@@ -142,6 +145,7 @@ export function CommentThread({ poemId, interactive, currentUserId, commentCount
         targetId: poemId,
         content,
         ...(replyTo ? { parentCommentId: replyTo.id } : {}),
+        ...(anonymous ? { anonymous: true } : {}),
       });
       if (replyTo) {
         const parentId = replyTo.id;
@@ -315,6 +319,14 @@ export function CommentThread({ poemId, interactive, currentUserId, commentCount
             error={fieldError ?? undefined}
             testID="comment-input"
           />
+          <ToggleRow
+            value={anonymous}
+            onValueChange={setAnonymous}
+            label="Comment anonymously"
+            testID="comment-anonymous"
+          >
+            <AnonymityExplainer />
+          </ToggleRow>
           <Button
             label={replyTo ? 'Post reply' : 'Post comment'}
             onPress={() => void post()}

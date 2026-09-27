@@ -29,9 +29,24 @@ const contentFields = {
   tags: z.array(tagSchema).max(10, 'at most 10 tags').optional(),
   visibility: z.enum(['public', 'followers', 'unlisted', 'private_draft']).optional(),
   anonymous: z.boolean().optional(),
+  isUnsentPoem: z.boolean().optional(),
+  unsentRecipientLabel: z
+    .string()
+    .trim()
+    .max(80, 'must be at most 80 characters')
+    .optional(),
 };
 
-const createPoemSchema = z.object(contentFields);
+// Unsent Poem fields (plan step 61): a recipient label without the flag is
+// incoherent at creation. Updates are checked in the service, where the
+// stored flag is visible.
+const createPoemSchema = z.object(contentFields).refine(
+  (obj) => obj.isUnsentPoem === true || !obj.unsentRecipientLabel,
+  {
+    message: 'unsentRecipientLabel requires isUnsentPoem to be true',
+    path: ['unsentRecipientLabel'],
+  },
+);
 
 const updatePoemSchema = z
   .object(Object.fromEntries(Object.entries(contentFields).map(([k, v]) => [k, v.optional()])))

@@ -5,7 +5,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 6 complete — STOPPED for user review (Phase 7: Anonymous Layer next); server + mobile pushed to Xantonozar/verso
+**Current status:** Phase 7 complete — STOPPED for user review (Phase 8: Collaboration next); server + mobile pushed to Xantonozar/verso
 **Last updated:** 2026-09-27
 
 ---
@@ -148,12 +148,12 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 7 — Anonymous Layer
 
-- [ ] 7.1 `anonymous` flag across Poem/Comment/Reaction (serializer strips identity for non-owner/non-mod)
-- [ ] 7.2 Unsent Poem fields in creation flow
-- [ ] 7.3 Mobile: anonymous toggle + inline explainer
-- [ ] 7.4 Regression test: non-owner never receives real authorId (poem, comment, reaction, search)
+- [x] 7.1 `anonymous` flag across Poem/Comment/Reaction (serializer strips identity for non-owner/non-mod) - identity stripping verified across `poem.service.getPoem` (author **and** authorId), `serializeComment`, `serializeReaction` (never echoes userId), diary `serialize`, feed-item/discover/collection hydration (`author: null` for anonymous); stale "full anonymity hardening is Phase 7" comments in `poem.service`/`engagement.service`/`diary.service` replaced with pointers to the new regression suite
+- [x] 7.2 Unsent Poem fields in creation flow - `isUnsentPoem`/`unsentRecipientLabel` added to `createPoemSchema` (create refine: label ⇒ flag true ⇒ 400), `createPoem` pass-through, `UPDATABLE_FIELDS`, `serialize()`; `updatePoem` coherence (flag off ⇒ stale label cleared, label while flag off ⇒ 400); 5 tests in `tests/poems/unsent-poem.test.js`
+- [x] 7.3 Mobile: anonymous toggle + inline explainer - shared `components/ToggleRow.tsx` + `AnonymityExplainer.tsx` ("readers see no name/profile; **moderators can still see who wrote it**"); toggles in `PoemEditor` (anonymous + unsent + recipient label field), `CommentThread` composer, `ReactionBar`; API types gained `anonymous?`/`isUnsentPoem?`/`unsentRecipientLabel?` — fields only travel when toggled/changed so default payloads stay minimal
+- [x] 7.4 Regression test: non-owner never receives real authorId (poem, comment, reaction, search) - `tests/anonymous/anonymity.test.js` (11 tests): deep-string scan of raw response bodies for the real id **and** username across poem detail (reader ✗ / owner ✓ / mod ✓), BFF `/mobile/poems/:id`, comment create/list/reply, reaction create (asserts DB still stores the real userId), diary detail, feed, discover-by-mood, collections hydration — every case has a positive control proving the scanner detects leaks; search leg deferred until the search endpoint ships (§6, no route yet)
 
-**Phase 7 gate:** 7.4 green; serializer changes reviewed.
+**Phase 7 gate:** ✅ server **416/416** (40 suites) + lint 0; mobile **115/115** (11 suites) + tsc/lint clean.
 
 ---
 
@@ -297,3 +297,4 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 | 2026-09-27 | Phase 4 (incl. remote push) | awaiting review |
 | 2026-09-27 | Phase 5 (incl. remote push) | awaiting review |
 | 2026-09-27 | Phase 6 (incl. remote push) | awaiting review |
+| 2026-09-27 | Phase 7 (incl. remote push) | awaiting review |

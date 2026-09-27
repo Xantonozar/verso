@@ -98,8 +98,8 @@ function serializeAuthor(user) {
 
 /**
  * Comment serialization — anonymous authors hide their id/name from everyone
- * except themselves and moderators (mirrors the poem rule; full anonymity
- * hardening is Phase 7).
+ * except themselves and moderators (mirrors the poem rule; asserted by
+ * tests/anonymous/anonymity.test.js).
  */
 function serializeComment(doc, { author = null, requester = null } = {}) {
   const isSelf = requester?.id != null && String(doc.authorId) === String(requester.id);
