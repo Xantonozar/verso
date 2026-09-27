@@ -5,7 +5,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 4 complete — STOPPED for user review (Phase 5: Discovery & Feed next); server + mobile pushed to Xantonozar/verso
+**Current status:** Phase 5 complete — STOPPED for user review (Phase 6: Collections next); server + mobile pushed to Xantonozar/verso
 **Last updated:** 2026-09-27
 
 ---
@@ -127,13 +127,13 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 5 — Discovery & Feed
 
-- [ ] 5.1 Mood/tag discovery endpoints using §4 compound indexes + `explain()` IXSCAN
-- [ ] 5.2 Following-feed (indexed query + cursor pagination)
-- [ ] 5.3 Trending as scheduled BullMQ job (denormalized + Redis TTL, duration logged)
-- [ ] 5.4 Mobile: discovery screens (mood picker, tags, trending, random) + feed infinite scroll + distinct empty states
-- [ ] 5.5 Load-test feed + trending; fix any COLLSCAN
+- [x] 5.1 Mood/tag discovery endpoints using §4 compound indexes + `explain()` IXSCAN - `server/src/modules/discover/*` mounted at `/discover` (`GET /mood/:mood`, `/tags/:tag`, `/trending`, `/random`; cursor = ISO `createdAt`, limit 1..50); explain suite asserts IXSCAN present + COLLSCAN absent + exact index names (`moods_1_status_1_visibility_1_createdAt_-1`, `tags_1_status_1_createdAt_-1`) - 17 discovery tests
+- [x] 5.2 Following-feed (indexed query + cursor pagination) - `GET /feed` (auth only: followees via `authorId_1_status_1_createdAt_-1`, visibility public/followers, batch author hydration, no-follows → empty page 200); 8 feed tests
+- [x] 5.3 Trending as scheduled BullMQ job (denormalized + Redis TTL, duration logged) - `poems.trendingScore` + `{status, visibility, trendingScore:-1}` index; `jobs/trending.js` job scheduler every 5 min (logs `trending:refreshed` + `durationMs`/`records`, immediate first run, Redis-down → graceful skip); read path Redis `trending:global` EX 60 → denormalized-score Mongo fallback; formula `reads + reactions*3 + comments*2 + saves*2` over 7d window; 7 trending tests (stale-createdAt via native driver, empty-corpus `DISCOVER_EMPTY`)
+- [x] 5.4 Mobile: discovery screens (mood picker, tags, trending, random) + feed infinite scroll + distinct empty states - `app/(app)/discover.tsx` (4 tabs w/ a11y `accessibilityRole="tab"`, tag chips derived from trending payload, manual tag entry, `DISCOVER_EMPTY` → own empty state with re-draw), `app/(app)/feed.tsx` + shared `components/PagedFeedList.tsx` (skeleton → items + `end` footer vs `empty` vs retryable error; reset = remount via `key`, no setState-in-effect), `Skeleton` (reduce-motion aware) / `FeedCard`, profile `Feed`/`Discover` entries (`open-feed`/`open-discover`); mobile **96/96** tests, `tsc` 0, `expo lint` 0
+- [x] 5.5 Load-test feed + trending; fix any COLLSCAN - `tests/discover/load.test.js`: feed p50 4.0ms / p95 7.5ms, trending p95 4.7ms, mood p95 4.0ms (budget 400ms), zero COLLSCAN; full server suite **377/377** across 37 suites + lint 0
 
-**Phase 5 gate:** no COLLSCAN on hot paths; p95 within §10.21 budget.
+**Phase 5 gate:** ✅ no COLLSCAN on hot paths (explain IXSCAN + exact-index green); p95 far within §10.21 budget (feed 7.5ms, trending 4.7ms); server **377/377** (37 suites) + lint 0; mobile **96/96** + tsc/lint clean.
 
 ---
 
@@ -295,3 +295,4 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 | 2026-09-26 | Phase 2B (incl. remote push) | awaiting review |
 | 2026-09-27 | Phase 3 (incl. remote push) | awaiting review |
 | 2026-09-27 | Phase 4 (incl. remote push) | awaiting review |
+| 2026-09-27 | Phase 5 (incl. remote push) | awaiting review |

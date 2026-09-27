@@ -252,6 +252,18 @@ export default function ProfileScreen() {
                 onPress={() => router.push('/diary/new')}
                 testID="new-diary"
               />
+              <Button
+                label="Feed"
+                variant="secondary"
+                onPress={() => router.push('/feed')}
+                testID="open-feed"
+              />
+              <Button
+                label="Discover"
+                variant="secondary"
+                onPress={() => router.push('/discover')}
+                testID="open-discover"
+              />
               <Button label="Edit profile" variant="secondary" onPress={startEditing} testID="edit-profile" />
               <Button
                 label={uploading ? `Uploading… ${uploadProgress}%` : 'Change photo'}

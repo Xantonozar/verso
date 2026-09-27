@@ -7,6 +7,7 @@ const { connectMongo, disconnectMongo } = require('./config/db');
 const { connectRedis, disconnectRedis } = require('./config/redis');
 const { configureCloudinary } = require('./config/cloudinary');
 const { createSocketServer } = require('./sockets');
+const { scheduleTrending, stopTrending } = require('./jobs/trending');
 const { logger } = require('./config/logger');
 
 async function main() {
@@ -32,6 +33,20 @@ async function main() {
   // Redis degrades gracefully — API stays up if it's down (§0.5 step 3)
   await connectRedis();
 
+  // Trending worker + scheduler (Phase 5 step 55) — skipped entirely when
+  // Redis is down; the read path then serves the denormalized Mongo index.
+  try {
+    const sched = await scheduleTrending();
+    if (sched.scheduled) {
+      logger.info({ event: 'trending:scheduler', scheduled: true }, 'Trending scheduler up');
+    }
+  } catch (err) {
+    logger.warn(
+      { event: 'trending:scheduler-failed', err: err.message },
+      'Trending scheduler failed to start - discovery still serves fallback scores',
+    );
+  }
+
   configureCloudinary();
 
   const app = createApp();
@@ -45,6 +60,7 @@ async function main() {
   const shutdown = async (signal) => {
     logger.info({ event: 'server:shutdown', signal }, 'Shutting down');
     io.close();
+    await stopTrending();
     server.close(async () => {
       await disconnectRedis();
       await disconnectMongo();

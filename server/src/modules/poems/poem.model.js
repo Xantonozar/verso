@@ -54,6 +54,9 @@ const poemSchema = createSchema({
     default: () => ({ reads: 0, reactionCount: 0, commentCount: 0, saveCount: 0, shareCount: 0 }),
   },
   publishedAt: { type: Date, default: null },
+  // Derived, never request-computed: the trending worker (Phase 5 step 55)
+  // denormalizes the score here; GET /discover/trending just reads it (§8.6).
+  trendingScore: { type: Number, default: 0 },
 });
 
 // §5 index plan — declared here too so mongodb-memory-server (`.init()`)
@@ -61,6 +64,10 @@ const poemSchema = createSchema({
 poemSchema.index({ authorId: 1, status: 1, createdAt: -1 });
 poemSchema.index({ moods: 1, status: 1, visibility: 1, createdAt: -1 });
 poemSchema.index({ tags: 1, status: 1, createdAt: -1 });
+// Phase 5 additions: published listing (trending job's window match + fallback
+// read ordered by the denormalized score) — background job, but still IXSCAN.
+poemSchema.index({ status: 1, visibility: 1, createdAt: -1 });
+poemSchema.index({ status: 1, visibility: 1, trendingScore: -1 });
 
 const Poem = mongoose.model('Poem', poemSchema);
 

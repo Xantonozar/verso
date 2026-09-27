@@ -15,6 +15,9 @@ module.exports = [
   { collection: 'poems', key: { authorId: 1, status: 1, createdAt: -1 } },
   { collection: 'poems', key: { moods: 1, status: 1, visibility: 1, createdAt: -1 } },
   { collection: 'poems', key: { tags: 1, status: 1, createdAt: -1 } },
+  // Phase 5: trending job window match + denormalized-score fallback read
+  { collection: 'poems', key: { status: 1, visibility: 1, createdAt: -1 } },
+  { collection: 'poems', key: { status: 1, visibility: 1, trendingScore: -1 } },
   { collection: 'comments', key: { targetType: 1, targetId: 1, createdAt: -1 } },
   {
     collection: 'reactions',
