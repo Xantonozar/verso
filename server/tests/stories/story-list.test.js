@@ -36,7 +36,8 @@ async function seedStory(authorId, i, { status = 'draft', ...overrides } = {}) {
     status,
     ...overrides,
   });
-  await Story.updateOne(
+  // native driver: mongoose timestamps make createdAt immutable via Model.updateOne
+  await Story.collection.updateOne(
     { _id: story._id },
     { $set: { createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, i)) } },
   );

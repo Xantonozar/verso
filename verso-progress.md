@@ -5,7 +5,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 7 complete — STOPPED for user review (Phase 8: Collaboration next); server + mobile pushed to Xantonozar/verso
+**Current status:** Phase 8 complete — STOPPED for user review (Phase 9: Duels, Prompts, Remix next); server + mobile pushed to Xantonozar/verso
 **Last updated:** 2026-09-27
 
 ---
@@ -159,13 +159,13 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 8 — Collaboration
 
-- [ ] 8.1 CollabPoem model + endpoints (server-side turn/line validation, append-only)
-- [ ] 8.2 CollaborationPiece + CollaborationSegment (materialized path, atomic childCount cap: single=1 child, multi=configured max)
-- [ ] 8.3 Segment-children endpoint + ReadingPath tracking (append-only)
-- [ ] 8.4 Mobile: collab relay UI + branch picker + path breadcrumb
-- [ ] 8.5 Race test: two simultaneous segment creates at cap → exactly one succeeds
+- [x] 8.1 CollabPoem model + endpoints (server-side turn/line validation, append-only) - `server/src/modules/collab/collab-poem.model.js` (embedded turns array w/ TODO for 16MB split, `{status:1,createdAt:-1}` index) + service/controller/routes mounted at `/collab-poems` (`POST /`, `GET /` cursor list, `GET /:id`, `POST /:id/turns`, `POST /:id/finish`); line count derived server-side (strip one trailing newline only, CRLF normalized, interior blanks count), blank content 400, `LINE_COUNT_MISMATCH` with `details[0].field='content'`, order = `turns.length` (never client-trusted), turn-after-finish 409 `COLLAB_FINISHED`, non-creator finish 403, `requireAuth` fail-closed on every route
+- [x] 8.2 CollaborationPiece + CollaborationSegment (materialized path, atomic childCount cap: single=1 child, multi=configured max) - piece carries `mode`/`maxBranches` (default 5, bounds 2-10, stored regardless of mode) + `rootSegmentId`; segment create materializes `ancestorPath`+`depth` and claims a branch slot via conditional `updateOne({_id: parentId, childCount: {$lt: cap}}, {$inc:{childCount:1}})` → matchedCount 0 = 409 `BRANCH_CAP_REACHED` (`details.cap`), `$inc -1` rollback if the segment insert then fails
+- [x] 8.3 Segment-children endpoint + ReadingPath tracking (append-only) - `GET /collaborations/:pieceId/segments` (+ single-segment GET for breadcrumb resume), `.../segments/:segmentId/children` (returns `cap`), `POST+GET /:pieceId/reading-path`: legality via ancestorPath forward/backward walk (must start at root 400, disconnected 400 `PATH_NOT_CONNECTED`, re-post current = idempotent), upsert with `$push` only + unique `{userId:1,pieceId:1}`, `returnDocument:'after'`; indexes `{ancestorPath:1}`, `{pieceId:1,parentId:1}`
+- [x] 8.4 Mobile: collab relay UI + branch picker + path breadcrumb - `lib/api/collab.ts` typed client, `collabs.tsx` hub (relay + piece lists with inline create forms), `collab-poem/[id].tsx` (open/finished indicator, live `N/M lines` counter with client pre-check, creator-only Finish, `countTurnLines` export), `piece/[id].tsx` (breadcrumb from `visitedSegmentIds` + 18-char crumb labels, branch picker, back-to-parent, composer with cap hint, first-visit path seeded at root), profile `open-collabs` entry; `collabScreens.test.tsx` **12 tests**; mobile **127/127** (12 suites), `tsc` 0, `expo lint` 0
+- [x] 8.5 Race test: two simultaneous segment creates at cap → exactly one succeeds - `tests/collab/collaboration.test.js` race cases assert `[201,409]` exactly-one-wins + exact `childCount`; `explain()` **IXSCAN not COLLSCAN** on `pieceId_1_parentId_1`, `ancestorPath_1`, `userId_1_pieceId_1` (`tests/collab/explain.test.js`, 90 segments seeded); also fixed 3 latent createdAt seed order-flakes (story-list, discovery, feed) by seeding via native `Model.collection.updateOne`
 
-**Phase 8 gate:** 8.5 green; `explain()` on ancestorPath/children queries.
+**Phase 8 gate:** ✅ server **440/440** (43 suites) + lint 0; mobile **127/127** (12 suites) + tsc/lint clean; race test + `explain()` IXSCAN green.
 
 ---
 

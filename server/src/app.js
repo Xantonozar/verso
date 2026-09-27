@@ -59,6 +59,7 @@ function createApp() {
   const { engagementRouter } = require('./modules/engagement/engagement.routes');
   const { discoverRouter } = require('./modules/discover/discover.routes');
   const { collectionRouter } = require('./modules/collections/collection.routes');
+  const { collabPoemRouter, collaborationRouter } = require('./modules/collab/collab.routes');
   app.use(`${API_PREFIX}/auth`, authRouter);
   app.use(`${API_PREFIX}/users`, userRouter);
   app.use(`${API_PREFIX}/poems`, poemRouter);
@@ -75,6 +76,10 @@ function createApp() {
   app.use(`${API_PREFIX}`, discoverRouter);
   // Collections (Phase 6, plan step 58): /collections* CRUD surface
   app.use(`${API_PREFIX}/collections`, collectionRouter);
+  // Collaboration (Phase 8, plan steps 63-65): /collab-poems* (fixed-turn
+  // relay) + /collaborations* (open/branching, segments + reading-path)
+  app.use(`${API_PREFIX}/collab-poems`, collabPoemRouter);
+  app.use(`${API_PREFIX}/collaborations`, collaborationRouter);
 
   // Health probe (load balancer / deploy checks)
   app.get('/health', (req, res) => {

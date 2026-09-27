@@ -46,7 +46,8 @@ async function seedPoem(authorId, overrides = {}) {
     publishedAt: new Date(Date.UTC(2026, 0, 1, 0, 0, 0) + i * 10_000),
     ...overrides,
   });
-  await Poem.updateOne(
+  // native driver: mongoose timestamps make createdAt immutable via Model.updateOne
+  await Poem.collection.updateOne(
     { _id: poem._id },
     { $set: { createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, 0) + i * 10_000) } },
   );
