@@ -58,6 +58,7 @@ function createApp() {
   const { diaryRouter } = require('./modules/diary/diary.routes');
   const { engagementRouter } = require('./modules/engagement/engagement.routes');
   const { discoverRouter } = require('./modules/discover/discover.routes');
+  const { collectionRouter } = require('./modules/collections/collection.routes');
   app.use(`${API_PREFIX}/auth`, authRouter);
   app.use(`${API_PREFIX}/users`, userRouter);
   app.use(`${API_PREFIX}/poems`, poemRouter);
@@ -72,6 +73,8 @@ function createApp() {
   // Discover + feed (Phase 5, plan steps 53-54): full paths from API_PREFIX
   // (/feed + /discover/*), mounted after the routers above — no collisions
   app.use(`${API_PREFIX}`, discoverRouter);
+  // Collections (Phase 6, plan step 58): /collections* CRUD surface
+  app.use(`${API_PREFIX}/collections`, collectionRouter);
 
   // Health probe (load balancer / deploy checks)
   app.get('/health', (req, res) => {

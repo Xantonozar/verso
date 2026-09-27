@@ -5,7 +5,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 5 complete — STOPPED for user review (Phase 6: Collections next); server + mobile pushed to Xantonozar/verso
+**Current status:** Phase 6 complete — STOPPED for user review (Phase 7: Anonymous Layer next); server + mobile pushed to Xantonozar/verso
 **Last updated:** 2026-09-27
 
 ---
@@ -139,10 +139,10 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 6 — Collections
 
-- [ ] 6.1 Collection model + endpoints (+ CollectionItem TODO comment)
-- [ ] 6.2 Mobile: collection create/browse + add/remove with optimistic update
+- [x] 6.1 Collection model + endpoints (+ CollectionItem TODO comment) - `server/src/modules/collections/*` mounted at `/collections` (`POST /`, `GET /`, `GET /:id`, `POST /:id/poems`, `DELETE /:id/poems/:poemId`); model mirrors diary (`ownerId`, title 1-80, description ≤300, visibility public/followers/private default public, `poemIds` + **§3.10a TODO** for `CollectionItem {collectionId, poemId, order, addedAt}` split, `{ownerId, createdAt: -1}` index); visibility matrix mirrors poem/diary (owner/mod, public, followers via Follow edge) with fail-closed 404 `COLLECTION_NOT_FOUND` (never 403 leak), mutations non-owner → 403 `FORBIDDEN`; add = `canView` poem eligibility (own drafts ok, others' drafts 404) + duplicate → 409 `POEM_IN_COLLECTION` (race via `poemIds: {$ne}` guard), remove → 204 / 404 `POEM_NOT_IN_COLLECTION`; `GET /:id` hydrates `poemIds` order, drops unviewable (keeps `poemCount`), batch authors, `serializeFeedItem` (anonymous → `author: null`); list = own-only cursor page; 23 collections tests
+- [x] 6.2 Mobile: collection create/browse + add/remove with optimistic update - `lib/api/collections.ts`, `app/(app)/collections.tsx` (list + inline create form w/ title validation + visibility picker, `collections-*` testIDs), `app/(app)/collection/[id].tsx` (detail: hydrated poems, **optimistic remove with snapshot rollback** on failure), reader picker in `poem/[id].tsx` (bottom-sheet Modal: list w/ membership from `poemIds`, **optimistic toggle + inverse rollback**, in-flight guard vs double-press), profile `open-collections` entry; `collectionsScreens.test.tsx` **10 tests**; mobile **106/106** (10 suites), `tsc` 0, `expo lint` 0
 
-**Phase 6 gate:** tests green.
+**Phase 6 gate:** ✅ server **400/400** (38 suites) + lint 0; mobile **106/106** (10 suites) + tsc/lint clean.
 
 ---
 
@@ -296,3 +296,4 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 | 2026-09-27 | Phase 3 (incl. remote push) | awaiting review |
 | 2026-09-27 | Phase 4 (incl. remote push) | awaiting review |
 | 2026-09-27 | Phase 5 (incl. remote push) | awaiting review |
+| 2026-09-27 | Phase 6 (incl. remote push) | awaiting review |

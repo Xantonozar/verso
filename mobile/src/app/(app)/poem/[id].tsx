@@ -1,16 +1,26 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../../components/Button';
 import { CommentThread } from '../../../components/engage/CommentThread';
 import { FeltGoodCard } from '../../../components/engage/FeltGoodCard';
 import { ReactionBar } from '../../../components/engage/ReactionBar';
 import { SaveButton } from '../../../components/engage/SaveButton';
+import { EmptyState } from '../../../components/EmptyState';
 import { ErrorState } from '../../../components/ErrorState';
+import { LoadingState } from '../../../components/LoadingState';
 import { useAuth } from '../../../context/AuthContext';
 import { ApiError } from '../../../lib/api/client';
+import {
+  addPoemToCollection,
+  CollectionSummary,
+  listCollections,
+  removePoemFromCollection,
+} from '../../../lib/api/collections';
 import { getMobilePoem, MobilePoemResponse } from '../../../lib/api/engagement';
+import { toast } from '../../../lib/toast';
+import { CONNECTIVITY_TOAST, isConnectivityError } from '../../../lib/validation';
 import { colors, layout, radii, spacing, typography } from '../../../theme/tokens';
 
 type LoadState = 'loading' | 'ready' | 'gone' | 'error';
@@ -42,6 +52,11 @@ export default function PoemReaderScreen() {
   const { user } = useAuth();
   const [mobile, setMobile] = useState<MobilePoemResponse | null>(null);
   const [state, setState] = useState<LoadState>('loading');
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerCollections, setPickerCollections] = useState<CollectionSummary[] | null>(null);
+  const [pickerError, setPickerError] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const fetchPoem = useCallback(async (): Promise<MobilePoemResponse> => getMobilePoem(id), [id]);
 
@@ -77,6 +92,55 @@ export default function PoemReaderScreen() {
       );
     }
   }, [fetchPoem]);
+
+  function openPicker() {
+    setPickerOpen(true);
+    setPickerCollections(null);
+    setPickerError(null);
+    listCollections()
+      .then((page) => {
+        setPickerCollections(page.items);
+      })
+      .catch(() => {
+        setPickerError("Couldn't load your collections.");
+      });
+  }
+
+  function toggleCollection(collection: CollectionSummary) {
+    if (!mobile || !pickerCollections || togglingId) return;
+    const poemId = mobile.poem.id;
+    const wasIn = collection.poemIds.includes(poemId);
+
+    const applyMembership = (rows: CollectionSummary[], inCollection: boolean) =>
+      rows.map((row) => {
+        if (row.id !== collection.id) return row;
+        const poemIds = inCollection
+          ? row.poemIds.includes(poemId)
+            ? row.poemIds
+            : [...row.poemIds, poemId]
+          : row.poemIds.filter((pid) => pid !== poemId);
+        return { ...row, poemIds, poemCount: poemIds.length };
+      });
+
+    setPickerCollections(applyMembership(pickerCollections, !wasIn));
+    setTogglingId(collection.id);
+    const request = wasIn
+      ? removePoemFromCollection(collection.id, poemId)
+      : addPoemToCollection(collection.id, poemId);
+    request
+      .then(() => {
+        toast.success(wasIn ? 'Removed from collection' : 'Added to collection');
+      })
+      .catch((err: unknown) => {
+        setPickerCollections((prev) => (prev ? applyMembership(prev, wasIn) : prev));
+        toast.error(
+          isConnectivityError(err) ? CONNECTIVITY_TOAST : "Couldn't update the collection. Try again.",
+        );
+      })
+      .finally(() => {
+        setTogglingId(null);
+      });
+  }
 
   if (state === 'loading') {
     return (
@@ -165,6 +229,15 @@ export default function PoemReaderScreen() {
           </View>
         ) : null}
 
+        {user ? (
+          <Button
+            label="Add to collection"
+            variant="secondary"
+            onPress={openPicker}
+            testID="add-to-collection"
+          />
+        ) : null}
+
         <View style={styles.engagement} testID="reader-engagement">
           <ReactionBar
             poemId={poem.id}
@@ -193,6 +266,49 @@ export default function PoemReaderScreen() {
           />
         </View>
       </ScrollView>
+
+      <Modal
+        visible={pickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPickerOpen(false)}
+      >
+        <View style={styles.backdrop}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>Add to collection</Text>
+            {pickerCollections === null ? (
+              <LoadingState label="Loading collections..." />
+            ) : pickerError ? (
+              <ErrorState message={pickerError} onRetry={openPicker} />
+            ) : pickerCollections.length === 0 ? (
+              <EmptyState
+                title="No collections yet"
+                subtitle="Create one from your profile first."
+              />
+            ) : (
+              pickerCollections.map((collection) => {
+                const inCollection = collection.poemIds.includes(poem.id);
+                return (
+                  <Button
+                    key={collection.id}
+                    label={inCollection ? `✓ ${collection.title}` : collection.title}
+                    variant={inCollection ? 'primary' : 'secondary'}
+                    onPress={() => toggleCollection(collection)}
+                    disabled={togglingId === collection.id}
+                    testID={`pick-${collection.id}`}
+                  />
+                );
+              })
+            )}
+            <Button
+              label="Close"
+              variant="secondary"
+              onPress={() => setPickerOpen(false)}
+              testID="picker-close"
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -263,6 +379,24 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingTop: spacing.xl,
+  },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  sheetTitle: {
+    ...typography.title,
+    fontSize: 18,
+    color: colors.ink,
+    marginBottom: spacing.xs,
   },
   skeleton: {
     gap: spacing.md,
