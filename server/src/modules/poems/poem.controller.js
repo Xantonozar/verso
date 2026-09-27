@@ -47,8 +47,9 @@ const unpublish = asyncHandler(async (req, res) => {
 
 // Reading-activity logging (plan step 82): visibility check runs inline,
 // the analytics write itself is queued (never synchronous on the read).
+// req.body carries the optional reader timezone offset (plan step 85).
 const read = asyncHandler(async (req, res) => {
-  ok(res, await analyticsService.logReadingActivity(req.params.id, req.user));
+  ok(res, await analyticsService.logReadingActivity(req.params.id, req.user, req.body));
 });
 
 module.exports = {

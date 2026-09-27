@@ -194,7 +194,12 @@ describe('reading-activity worker (plan 82, §8.15)', () => {
     const out = await processReadingActivityJob({
       data: { eventKey, poemId, readerId: bob.user.id },
     });
-    expect(out).toEqual({ counted: true, activityId: expect.any(String) });
+    expect(out).toEqual({
+      counted: true,
+      activityId: expect.any(String),
+      // streak rides the same job (Phase 13): first counted read today
+      streak: { updated: true, localDay: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) },
+    });
 
     const row = await ReadingActivity.findOne({ eventKey }).lean();
     expect(row).toBeTruthy();

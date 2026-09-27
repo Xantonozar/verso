@@ -435,6 +435,10 @@ describe('poem reader — states', () => {
     await render(<PoemReaderScreen />);
     await screen.findByText('First light');
 
-    await waitFor(() => expect(apiMock.post).toHaveBeenCalledWith('/poems/p1/read'));
+    await waitFor(() =>
+      expect(apiMock.post).toHaveBeenCalledWith('/poems/p1/read', {
+        tzOffsetMinutes: expect.any(Number),
+      }),
+    );
   });
 });

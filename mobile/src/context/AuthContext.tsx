@@ -23,6 +23,7 @@ export interface AuthUser {
   productRoles?: string[];
   securityRole?: string;
   moderation?: { status: string; warningCount?: number; isAnonymizedAccount?: boolean };
+  readingStreak?: { current: number; longest: number; lastReadDate: string | null };
   isFollowing?: boolean;
   createdAt?: string;
   updatedAt?: string;

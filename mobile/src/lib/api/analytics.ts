@@ -38,7 +38,11 @@ export async function getWriterAnalytics(days = 30): Promise<WriterAnalytics> {
  * Fire-and-forget: the reader screen never awaits this. The response body
  * is intentionally not destructured — bare test mocks resolve undefined,
  * and the server does the visibility check + queueing (plan step 82).
+ * The device's UTC offset rides along (plan step 85) so the worker can
+ * define the reading-streak day in the reader's LOCAL timezone.
  */
 export async function recordPoemRead(id: string): Promise<void> {
-  await api.post(`/poems/${encodeURIComponent(id)}/read`);
+  await api.post(`/poems/${encodeURIComponent(id)}/read`, {
+    tzOffsetMinutes: new Date().getTimezoneOffset(),
+  });
 }

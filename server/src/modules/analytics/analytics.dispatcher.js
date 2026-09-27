@@ -18,16 +18,20 @@ const { QUEUE_NAME, JOB_NAME } = require('../../jobs/analytics');
  */
 let connection = null;
 
-function buildReadingActivityJob({ poemId, readerId, eventKey }) {
+function buildReadingActivityJob({ poemId, readerId, eventKey, tzOffsetMinutes }) {
   if (!poemId || !eventKey) {
     throw new Error('dispatchReadingActivity: poemId/eventKey are required');
   }
-  return {
+  const data = {
     poemId: String(poemId),
     readerId: readerId ? String(readerId) : null,
     eventKey: String(eventKey),
     occurredAt: new Date().toISOString(),
   };
+  // Optional reader UTC offset (plan step 85) - the worker uses it to
+  // compute the streak day in the reader's local timezone.
+  if (Number.isFinite(tzOffsetMinutes)) data.tzOffsetMinutes = tzOffsetMinutes;
+  return data;
 }
 
 async function dispatchReadingActivity(input) {

@@ -11,6 +11,7 @@ const {
   versionsQuerySchema,
   mineQuerySchema,
 } = require('./poem.schemas');
+const { readBodySchema } = require('../analytics/analytics.schemas');
 const controller = require('./poem.controller');
 
 const router = express.Router();
@@ -54,11 +55,13 @@ router.post('/:id/publish', requireAuth, loadUser, validate({ params: idParamSch
 router.delete('/:id/publish', requireAuth, loadUser, validate({ params: idParamSchema }), controller.unpublish);
 // Reading activity (plan step 82): optionalAuth - public/unlisted poems are
 // read anonymously too; the analytics write is queued, never synchronous.
+// The optional tzOffsetMinutes body (plan step 85) rides along so the
+// worker can place the streak day in the reader's local timezone.
 router.post(
   '/:id/read',
   optionalAuth,
   loadUserOptional,
-  validate({ params: idParamSchema }),
+  validate({ params: idParamSchema, body: readBodySchema }),
   controller.read,
 );
 

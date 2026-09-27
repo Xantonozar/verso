@@ -1,7 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
 import { ErrorState } from '../../components/ErrorState';
@@ -32,6 +33,33 @@ function initialsOf(name: string): string {
   );
 }
 
+// Highest streak ever SHOWN on this device - growth vs this number is
+// what counts as a "new personal best" (plan step 86).
+const BEST_SEEN_KEY = 'verso:bestStreakSeen';
+
+/**
+ * Best-effort personal-best detection (plan step 86): when the profile's
+ * `readingStreak.longest` exceeds what we last showed, celebrate once in
+ * place. The first sight of a streak only seeds the baseline (no confetti
+ * on a fresh install); storage failures skip the moment silently - this
+ * is decoration, never data.
+ */
+async function checkStreakCelebration(data: AuthUser, onNewBest: () => void): Promise<void> {
+  const longest = data.readingStreak?.longest ?? 0;
+  if (longest <= 0) return;
+  try {
+    const seenRaw = await AsyncStorage.getItem(BEST_SEEN_KEY);
+    const parsed = Number(seenRaw);
+    const seen = seenRaw !== null && Number.isFinite(parsed) ? parsed : null;
+    if (seen !== null && longest > seen) onNewBest();
+    if (seen === null || longest > seen) {
+      await AsyncStorage.setItem(BEST_SEEN_KEY, String(longest));
+    }
+  } catch {
+    // storage unavailable - celebration is cosmetic, move on
+  }
+}
+
 export default function ProfileScreen() {
   const { user, updateUser, signOut } = useAuth();
   const [profile, setProfile] = useState<AuthUser | null>(null);
@@ -48,6 +76,11 @@ export default function ProfileScreen() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [stories, setStories] = useState<AuthorStoryItem[]>([]);
+
+  const [celebrating, setCelebrating] = useState(false);
+  // Stable Animated.Value without touching a ref during render
+  // (react-hooks/refs): initialized once, never reassigned.
+  const [streakPulse] = useState(() => new Animated.Value(1));
 
   useEffect(() => {
     if (!user?.id) return;
@@ -69,6 +102,17 @@ export default function ProfileScreen() {
     return data;
   }, []);
 
+  // Subtle in-place pulse for a new personal best (plan step 86) -
+  // no toast, no navigation; JS-driven so it behaves identically under
+  // the test environment.
+  useEffect(() => {
+    if (!celebrating) return;
+    Animated.sequence([
+      Animated.timing(streakPulse, { toValue: 1.15, duration: 240, useNativeDriver: false }),
+      Animated.timing(streakPulse, { toValue: 1, duration: 240, useNativeDriver: false }),
+    ]).start();
+  }, [celebrating, streakPulse]);
+
   useEffect(() => {
     let cancelled = false;
     fetchMe()
@@ -76,6 +120,7 @@ export default function ProfileScreen() {
         if (!cancelled) {
           setProfile(data);
           updateUser(data);
+          void checkStreakCelebration(data, () => setCelebrating(true));
         }
       })
       .catch(() => {
@@ -96,6 +141,7 @@ export default function ProfileScreen() {
       const data = await fetchMe();
       setProfile(data);
       updateUser(data);
+      void checkStreakCelebration(data, () => setCelebrating(true));
     } catch {
       setLoadFailed(true);
     } finally {
@@ -228,6 +274,26 @@ export default function ProfileScreen() {
             <Text style={styles.countLabel}>Following</Text>
           </View>
         </View>
+
+        {profile.readingStreak ? (
+          <View style={styles.streakRow}>
+            <Animated.View
+              style={[styles.streakBadge, { transform: [{ scale: streakPulse }] }]}
+              testID="streak-badge"
+            >
+              <Text style={styles.streakBadgeText}>
+                {profile.readingStreak.current > 0
+                  ? `${profile.readingStreak.current}-day reading streak`
+                  : 'No reading streak yet'}
+              </Text>
+            </Animated.View>
+            {celebrating ? (
+              <Text style={styles.streakBest} testID="streak-new-best">
+                New personal best!
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
 
         {!editing ? (
           <View style={styles.card}>
@@ -453,6 +519,28 @@ const styles = StyleSheet.create({
   countLabel: {
     ...typography.caption,
     color: colors.inkMuted,
+  },
+  streakRow: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  streakBadge: {
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  streakBadgeText: {
+    ...typography.caption,
+    color: colors.accentPressed,
+    fontWeight: '600',
+  },
+  streakBest: {
+    ...typography.caption,
+    color: colors.success,
+    fontWeight: '600',
   },
   card: {
     backgroundColor: colors.surface,

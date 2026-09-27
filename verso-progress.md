@@ -5,7 +5,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 12 complete — STOPPED for user review (Phase 13: Reading Streaks next); server + mobile pushed to Xantonozar/verso
+**Current status:** Phase 13 complete — STOPPED for user review (Phase 14: Moderation next); server + mobile pushed to Xantonozar/verso
 **Last updated:** 2026-09-28
 
 ---
@@ -217,11 +217,11 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 13 — Reading Streaks
 
-- [ ] 13.1 Streak logic on poem-read (user-local timezone day, atomic)
-- [ ] 13.2 Timezone edge test (11:58pm → 12:05am local extends streak)
-- [ ] 13.3 Mobile: streak on profile + personal-best moment
+- [x] 13.1 Streak logic on poem-read (user-local timezone day, atomic) - `modules/users/reading-streak.service.js`: single conditional `updateOne` (filter `lastReadDate != today` + aggregation pipeline: yesterday→current+1, else 1, longest=max) = per-local-day idempotent AND race-free, no read-then-write; client sends `tzOffsetMinutes` (getTimezoneOffset) on `POST /poems/:id/read` (zod -900..900, omitted→UTC); worker runs streak BEFORE the insert (replay-safe: duplicate pre-check can't eat it) anchored to job `occurredAt`; anon/self-reads never streak; local day persisted as UTC-midnight Date (canonical encoding)
+- [x] 13.2 Timezone edge test (11:58pm → 12:05am local extends streak) - `tests/streaks/reading-streak.test.js` pins 23:58 IST read → current=1/lastReadDate=Sep 28, then 00:05 IST (7 min later) → current=2/longest=2/lastReadDate=Sep 29 (a UTC-day impl would no-op or reset); + same-day no-op, gap→reset-keeps-longest, UTC-reader contrast at identical instants, offset fallback/unknown-user no-op, body passthrough + 400s (11 tests)
+- [x] 13.3 Mobile: streak on profile + personal-best moment - profile badge (`N-day reading streak` / `No reading streak yet`, hidden when payload lacks the field so pre-13 fixtures stay green) + non-blocking best moment: growth past `verso:bestStreakSeen` (AsyncStorage) → in-place pulse + `New personal best!` caption, baseline seeds silently; read ping now sends device offset; 5 new screen tests
 
-**Phase 13 gate:** 13.2 green.
+**Phase 13 gate:** 13.2 green (11:58pm→12:05am IST pair pinned, atomic guard + UTC contrast green); server **552/552** (50 suites) + eslint 0; mobile **178/178** + tsc/lint 0.
 
 ---
 

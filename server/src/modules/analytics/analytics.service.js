@@ -35,7 +35,7 @@ function startOfUtcDay(date) {
  * id (deterministic jobId) and the worker's unique index folds them into
  * a single counted read (§8.15). Distinct reads stay distinct events.
  */
-async function logReadingActivity(poemId, requester) {
+async function logReadingActivity(poemId, requester, opts = {}) {
   const poem = await Poem.findById(poemId)
     .select('authorId status visibility')
     .lean();
@@ -45,11 +45,15 @@ async function logReadingActivity(poemId, requester) {
   }
 
   const eventKey = `read:${poemId}:${requester?.id || 'anon'}:${randomUUID()}`;
-  const result = await analyticsDispatcher.dispatchReadingActivity({
+  const input = {
     poemId,
     readerId: requester?.id || null,
     eventKey,
-  });
+  };
+  // Reader-supplied UTC offset (plan step 85) - omitted when absent/invalid
+  // so the worker falls back to UTC days.
+  if (Number.isFinite(opts.tzOffsetMinutes)) input.tzOffsetMinutes = opts.tzOffsetMinutes;
+  const result = await analyticsDispatcher.dispatchReadingActivity(input);
   return { queued: result.queued, reason: result.reason || null, jobId: result.jobId || null };
 }
 
