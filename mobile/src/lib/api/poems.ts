@@ -42,6 +42,8 @@ export interface Poem {
   createdAt: string;
   updatedAt: string;
   author?: PoemAuthor | null;
+  /** Set by GET /poems/:id when this poem is a remix — the original's id. */
+  remixOf?: string | null;
 }
 
 export interface CreatePoemInput {

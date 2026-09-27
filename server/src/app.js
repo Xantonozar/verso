@@ -60,6 +60,9 @@ function createApp() {
   const { discoverRouter } = require('./modules/discover/discover.routes');
   const { collectionRouter } = require('./modules/collections/collection.routes');
   const { collabPoemRouter, collaborationRouter } = require('./modules/collab/collab.routes');
+  const { duelRouter } = require('./modules/duels/duel.routes');
+  const { promptRouter } = require('./modules/prompts/prompt.routes');
+  const { remixRouter } = require('./modules/remixes/remix.routes');
   app.use(`${API_PREFIX}/auth`, authRouter);
   app.use(`${API_PREFIX}/users`, userRouter);
   app.use(`${API_PREFIX}/poems`, poemRouter);
@@ -80,6 +83,11 @@ function createApp() {
   // relay) + /collaborations* (open/branching, segments + reading-path)
   app.use(`${API_PREFIX}/collab-poems`, collabPoemRouter);
   app.use(`${API_PREFIX}/collaborations`, collaborationRouter);
+
+  // Duels + prompts + remixes (Phase 9, plan steps 68-71).
+  app.use(`${API_PREFIX}/duels`, duelRouter);
+  app.use(`${API_PREFIX}/prompts`, promptRouter);
+  app.use(`${API_PREFIX}/remixes`, remixRouter);
 
   // Health probe (load balancer / deploy checks)
   app.get('/health', (req, res) => {

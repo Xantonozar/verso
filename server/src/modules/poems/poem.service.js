@@ -5,6 +5,9 @@ const { assertOwner, assertOwnerOrModerator, isModerator } = require('../../midd
 const { logger } = require('../../config/logger');
 const { User } = require('../users/user.model');
 const { Follow } = require('../users/follow.model');
+const { Remix } = require('../remixes/remix.model');
+const { serializeFeedItem } = require('../../serializers/feed-item.serializer');
+const { Poem } = require('./poem.model');
 const poemRepo = require('./poem.repository');
 
 /**
@@ -139,7 +142,37 @@ async function getPoem(poemId, requester) {
   // Anonymous poems must never leak the real author through `authorId` either —
   // both strips are asserted by tests/anonymous/anonymity.test.js (Phase 7).
   if (hideIdentity) delete out.authorId;
+  // Remix attribution (Phase 9): null when the poem is an original.
+  const remix = await Remix.findOne({ remixPoemId: poem._id })
+    .select('originalPoemId')
+    .lean();
+  out.remixOf = remix ? String(remix.originalPoemId) : null;
   return out;
+}
+
+/**
+ * The caller's own poems, newest first (Phase 9): powers the prompt-submission
+ * picker — there is otherwise no list endpoint for poems (§5 lists only
+ * single-poem reads). `author` is intentionally null: these are the viewer's
+ * own rows and the serializer never leaks `authorId`.
+ */
+async function listOwnPoems(user, query = {}) {
+  const limit = query.limit ?? 20;
+  const filter = { authorId: user.id };
+  if (query.status) filter.status = query.status;
+  if (query.cursor) filter.createdAt = { $lt: new Date(query.cursor) };
+
+  const docs = await Poem.find(filter)
+    .sort({ createdAt: -1 })
+    .limit(limit + 1)
+    .lean();
+  const hasMore = docs.length > limit;
+  const page = hasMore ? docs.slice(0, limit) : docs;
+  const last = page[page.length - 1];
+  return {
+    items: page.map((p) => serializeFeedItem('poem', p, null)),
+    nextCursor: hasMore && last ? new Date(last.createdAt).toISOString() : null,
+  };
 }
 
 async function updatePoem(poemId, user, patch) {
@@ -314,4 +347,5 @@ module.exports = {
   publishPoem,
   unpublishPoem,
   canView, // shared with engagement (Phase 3) — one visibility matrix, no copies
+  listOwnPoems, // Phase 9 — prompt-submission picker (own poems only)
 };

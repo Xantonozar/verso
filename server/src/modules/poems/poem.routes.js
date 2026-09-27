@@ -9,6 +9,7 @@ const {
   updatePoemSchema,
   autosaveDraftSchema,
   versionsQuerySchema,
+  mineQuerySchema,
 } = require('./poem.schemas');
 const controller = require('./poem.controller');
 
@@ -17,6 +18,8 @@ const router = express.Router();
 // Reads are optionalAuth: anonymous/unlisted/public poems resolve visibility
 // against the requester when a token is present (plan step 39).
 router.post('/', requireAuth, loadUser, validate({ body: createPoemSchema }), controller.create);
+// Own poems for the prompt-submission picker (Phase 9) — must precede '/:id'.
+router.get('/mine', requireAuth, loadUser, validate({ query: mineQuerySchema }), controller.mine);
 router.get(
   '/:id',
   optionalAuth,

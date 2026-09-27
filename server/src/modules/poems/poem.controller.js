@@ -23,6 +23,10 @@ const remove = asyncHandler(async (req, res) => {
   ok(res, await poemService.deletePoem(req.params.id, req.user));
 });
 
+const mine = asyncHandler(async (req, res) => {
+  ok(res, await poemService.listOwnPoems(req.user, req.query));
+});
+
 const versions = asyncHandler(async (req, res) => {
   const { cursor, limit } = req.query;
   ok(res, await poemService.listVersions(req.params.id, req.user, { cursor, limit }));
@@ -40,4 +44,4 @@ const unpublish = asyncHandler(async (req, res) => {
   ok(res, await poemService.unpublishPoem(req.params.id, req.user));
 });
 
-module.exports = { create, get, update, remove, versions, autosave, publish, unpublish };
+module.exports = { create, get, update, remove, versions, autosave, publish, unpublish, mine };

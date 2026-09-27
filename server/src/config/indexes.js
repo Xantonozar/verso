@@ -55,4 +55,18 @@ module.exports = [
   { collection: 'saves', key: { userId: 1, poemId: 1 }, options: { unique: true } },
   // comment thread page (top-level) + reply batch share this compound
   { collection: 'comments', key: { targetType: 1, targetId: 1, parentCommentId: 1, createdAt: 1 } },
+
+  // Phase 9 — duels, prompts, remixes (plan steps 68-70)
+  // duel list pagination + the /poems/mine picker (own rows, newest first)
+  { collection: 'duels', key: { createdAt: -1 } },
+  { collection: 'poems', key: { authorId: 1, createdAt: -1 } },
+  // one vote per user per duel — the arbiter behind the $inc + rollback
+  { collection: 'duelvotes', key: { duelId: 1, userId: 1 }, options: { unique: true } },
+  // current-prompt lookup + one submission per (prompt, user)
+  { collection: 'prompts', key: { weekOf: -1 } },
+  { collection: 'promptsubmissions', key: { promptId: 1, userId: 1 }, options: { unique: true } },
+  { collection: 'promptsubmissions', key: { promptId: 1, createdAt: -1 } },
+  // attribution edge — at most one link per (original, remix) pair
+  { collection: 'remixes', key: { originalPoemId: 1, remixPoemId: 1 }, options: { unique: true } },
+  { collection: 'remixes', key: { remixPoemId: 1 } },
 ];

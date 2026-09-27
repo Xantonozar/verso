@@ -71,10 +71,26 @@ const versionsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1, 'must be at least 1').max(50, 'must be at most 50').optional(),
 });
 
+/** GET /poems/mine (Phase 9) — own poems for the prompt-submission picker. */
+const mineQuerySchema = z.object({
+  status: z.enum(['draft', 'published', 'removed']).optional(),
+  cursor: z
+    .string()
+    .refine((v) => !Number.isNaN(Date.parse(v)), 'must be an ISO date cursor')
+    .optional(),
+  limit: z.coerce
+    .number()
+    .int('must be an integer')
+    .min(1, 'must be at least 1')
+    .max(50, 'must be at most 50')
+    .optional(),
+});
+
 module.exports = {
   idParamSchema,
   createPoemSchema,
   updatePoemSchema,
   autosaveDraftSchema,
   versionsQuerySchema,
+  mineQuerySchema,
 };

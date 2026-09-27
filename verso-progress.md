@@ -5,7 +5,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 8 complete — STOPPED for user review (Phase 9: Duels, Prompts, Remix next); server + mobile pushed to Xantonozar/verso
+**Current status:** Phase 9 complete — STOPPED for user review (Phase 10: Messaging next); server + mobile pushed to Xantonozar/verso
 **Last updated:** 2026-09-27
 
 ---
@@ -171,12 +171,12 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 9 — Duels, Prompts, Remix
 
-- [ ] 9.1 Duel + DuelVote models + endpoints (unique vote index, atomic $inc)
-- [ ] 9.2 Prompt model + submission linking
-- [ ] 9.3 Remix model + endpoint (original must be publicly readable)
-- [ ] 9.4 Mobile: duel screen, weekly prompt, remix flow with attribution
+- [x] 9.1 Duel + DuelVote models + endpoints (unique vote index, atomic $inc) - `server/src/modules/duels/` (`duel.model`, `duel-vote.model`, service/controller/routes mounted at `/duels`); effective status derived from deadlines (`open`/`voting`/`closed`) serialized in every response; vote = phase check → conditional atomic `$inc` with deadline filter (matchedCount 0 → 409 `DUEL_CLOSED`) → `DuelVote.create` → 11000 → `$inc -1` rollback → 409 `DUPLICATE_VOTE`; vote response returns authoritative `{votes, myVote, status}`; create validates distinct existing published poems (404 `POEM_NOT_FOUND`, 400 `POEM_NOT_PUBLIC`, 400 `DUEL_SAME_POET`, zod refines `poemAId!==poemBId`, `votingDeadline>=submissionDeadline`), poets derived server-side; `GET /duels` cursor list + `GET /duels/:id` hydrated detail (`myVote`); unique `{duelId,userId}` index; 11 duel tests incl. **two parallel-vote race cases** (same user → sorted `[201,409]` tally 1; different users → `[201,201]` tally `{1,1}`)
+- [x] 9.2 Prompt model + submission linking - `server/src/modules/prompts/` mounted at `/prompts`: `GET /current` = newest `weekOf<=now` (404 `NO_PROMPT`) + `mySubmission`; `POST /:id/submissions` own-published only (403 `FORBIDDEN`, 400 `POEM_NOT_PUBLISHED`, 404 `POEM_NOT_FOUND`), unique `(promptId,userId)` → 11000 = 409 `ALREADY_SUBMITTED`; submissions list = cursor + batch poems + per-row `canView` filter (no `authorId` leak, anonymous → `author:null`); `GET /poems/mine` added on poems module (before `/:id`, optional `status` enum, cursor) to power the picker; 12 prompt tests
+- [x] 9.3 Remix model + endpoint (original must be publicly readable) - `server/src/modules/remixes/` mounted at `/remixes`: `assertOriginalReadable` (404 `POEM_NOT_FOUND`, 400 `ORIGINAL_NOT_PUBLIC` requester-independent incl. followers-only); flow = `createPoem` → `publishPoem` → `Remix.create` with rollback deletes (Poem, PoemVersion, Remix) on failure; zod blank-content refine, visibility enum; unique `{originalPoemId,remixPoemId}`; `getPoem` now returns `remixOf: String|null`; `serializeFeedItem` reused for `GET /poems/mine`; 6 remix tests; **server full run 469/469 (46 suites) + eslint 0**
+- [x] 9.4 Mobile: duel screen, weekly prompt, remix flow with attribution - `lib/api/{duels,prompts,remixes}.ts` typed clients (`Poem.remixOf` added), `duel.tsx` (side-by-side board, settled/rollback vote + toast, duel-* testIDs, loading/ready/error/empty), `prompt.tsx` (prompt card, published-poem picker, submitted state, NO_PROMPT empty), `remix/[id].tsx` (attribution card before submit, title prefilled `X (remix)`, publish → `router.replace(/poem/:id)`), profile `open-duels`/`open-prompt` entries, reader `remix-poem`/`view-original` buttons; `competitionScreens.test.tsx` **15 tests** (vote settle/rollback/closed, prompt picker + ALREADY_SUBMITTED + empty states, remix attribution/prefill/validation/error, profile entries); mobile **142/142 (13 suites)**, tsc 0, expo lint 0. Note: mid-flight optimistic frame isn't observable in RNTL 14 (a press whose handler awaits a pending promise hangs `fireEvent`'s internal act — settled + rollback tests cover the contract instead)
 
-**Phase 9 gate:** tests green.
+**Phase 9 gate:** ✅ server **469/469** (46 suites) + eslint 0; mobile **142/142** (13 suites) + tsc/lint clean.
 
 ---
 

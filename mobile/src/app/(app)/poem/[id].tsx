@@ -238,6 +238,24 @@ export default function PoemReaderScreen() {
           />
         ) : null}
 
+        {poem.remixOf ? (
+          <Button
+            label="View original poem"
+            variant="secondary"
+            onPress={() => router.push(`/poem/${poem.remixOf}`)}
+            testID="view-original"
+          />
+        ) : null}
+
+        {poem.status === 'published' ? (
+          <Button
+            label="Remix this poem"
+            variant="secondary"
+            onPress={() => router.push(`/remix/${poem.id}`)}
+            testID="remix-poem"
+          />
+        ) : null}
+
         <View style={styles.engagement} testID="reader-engagement">
           <ReactionBar
             poemId={poem.id}

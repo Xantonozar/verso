@@ -276,6 +276,18 @@ export default function ProfileScreen() {
                 onPress={() => router.push('/collabs')}
                 testID="open-collabs"
               />
+              <Button
+                label="Duels"
+                variant="secondary"
+                onPress={() => router.push('/duel')}
+                testID="open-duels"
+              />
+              <Button
+                label="Weekly prompt"
+                variant="secondary"
+                onPress={() => router.push('/prompt')}
+                testID="open-prompt"
+              />
               <Button label="Edit profile" variant="secondary" onPress={startEditing} testID="edit-profile" />
               <Button
                 label={uploading ? `Uploading… ${uploadProgress}%` : 'Change photo'}
