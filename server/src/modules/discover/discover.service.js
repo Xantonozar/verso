@@ -3,6 +3,7 @@
 const { NotFoundError } = require('../../errors');
 const { logger } = require('../../config/logger');
 const { isRedisUp, getRedis } = require('../../config/redis');
+const { feedScope, publicScope } = require('../../queries/content-scope');
 const { serializeFeedItem } = require('../../serializers/feed-item.serializer');
 const repo = require('./discover.repository');
 
@@ -72,8 +73,7 @@ async function getFeed(userId, query) {
   const { rows, nextCursor } = await fetchPage(
     {
       authorId: { $in: followees },
-      status: 'published',
-      visibility: { $in: ['public', 'followers'] },
+      ...feedScope(),
     },
     pageArgs(query),
   );
@@ -83,7 +83,7 @@ async function getFeed(userId, query) {
 /** Mood discovery (plan 53.1) — public published poems carrying the mood. */
 async function getByMood(mood, query) {
   const { rows, nextCursor } = await fetchPage(
-    { moods: mood, status: 'published', visibility: 'public' },
+    { moods: mood, ...publicScope() },
     pageArgs(query),
   );
   return { items: await serializeItems(rows), nextCursor };
@@ -92,7 +92,7 @@ async function getByMood(mood, query) {
 /** Tag discovery (plan 53.1) — public published poems carrying the tag. */
 async function getByTag(tag, query) {
   const { rows, nextCursor } = await fetchPage(
-    { tags: tag, status: 'published', visibility: 'public' },
+    { tags: tag, ...publicScope() },
     pageArgs(query),
   );
   return { items: await serializeItems(rows), nextCursor };

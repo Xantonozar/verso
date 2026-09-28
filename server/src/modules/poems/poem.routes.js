@@ -3,6 +3,7 @@
 const express = require('express');
 const { validate } = require('../../middleware/validate');
 const { requireAuth, optionalAuth, loadUser, loadUserOptional } = require('../../middleware/auth');
+const { assertCanCreateContent } = require('../../middleware/authz');
 const {
   idParamSchema,
   createPoemSchema,
@@ -18,7 +19,8 @@ const router = express.Router();
 
 // Reads are optionalAuth: anonymous/unlisted/public poems resolve visibility
 // against the requester when a token is present (plan step 39).
-router.post('/', requireAuth, loadUser, validate({ body: createPoemSchema }), controller.create);
+// Restricted accounts may read but not publish (Phase 14 step 89).
+router.post('/', requireAuth, loadUser, assertCanCreateContent, validate({ body: createPoemSchema }), controller.create);
 // Own poems for the prompt-submission picker (Phase 9) — must precede '/:id'.
 router.get('/mine', requireAuth, loadUser, validate({ query: mineQuerySchema }), controller.mine);
 router.get(

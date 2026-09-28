@@ -3,6 +3,7 @@
 const express = require('express');
 const { validate } = require('../../middleware/validate');
 const { requireAuth, optionalAuth, loadUser, loadUserOptional } = require('../../middleware/auth');
+const { assertCanCreateContent } = require('../../middleware/authz');
 const {
   idParamSchema,
   chapterParamsSchema,
@@ -22,7 +23,8 @@ const router = express.Router();
 
 // Reads are optionalAuth: visibility (published/unlisted vs private) resolves
 // against the requester when a token is present (plan 36B).
-router.post('/', requireAuth, loadUser, validate({ body: createStorySchema }), controller.create);
+// Restricted accounts may read but not publish (Phase 14 step 89).
+router.post('/', requireAuth, loadUser, assertCanCreateContent, validate({ body: createStorySchema }), controller.create);
 router.get(
   '/:id',
   optionalAuth,

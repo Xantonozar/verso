@@ -5,8 +5,8 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 > Rule: a step is `[x]` only when its verification (test, `explain()`, smoke run) passed.
 > After each **phase** completes, execution stops and waits for user review.
 
-**Current status:** Phase 13 complete — STOPPED for user review (Phase 14: Moderation next); server + mobile pushed to Xantonozar/verso
-**Last updated:** 2026-09-28
+**Current status:** Phase 14 complete — STOPPED for user review (Phase 15: Hardening & Polish next); server + mobile pushed to Xantonozar/verso
+**Last updated:** 2026-09-29
 
 ---
 
@@ -227,13 +227,13 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` ski
 
 ## Phase 14 — Moderation
 
-- [ ] 14.1 Report + ModerationAction models + endpoints
-- [ ] 14.2 Shared content-visibility scope helper (used by every read query)
-- [ ] 14.3 Progressive enforcement (warning → restriction → ban → identity_revealed w/ audit log)
-- [ ] 14.4 Mobile report flow (+ optional admin web panel → Playwright E2E if built)
-- [ ] 14.5 Cross-module test: removed content never appears in list/feed/search endpoints
+- [x] 14.1 Report + ModerationAction models + endpoints - `modules/moderation/{report,moderation-action}.model.js` (enums REPORT_REASONS/TARGET_TYPES/STATUSES + ACTION_TYPES; indexes `{reporterId,targetType,targetId}`, `{status,createdAt:-1}`, `{userId,createdAt:-1}`) + `moderation.{schemas,service,controller,routes}.js` mounted at `API_PREFIX`: `POST /reports` (409 DUPLICATE_REPORT on open dup - dismissed allows re-report, 400 CANNOT_REPORT_SELF, 404 REPORT_TARGET_NOT_FOUND fail-closed via `poemCanView`, invalid reason → field-level 400); `GET /moderation/reports` (`?status=` filter) + `PATCH /moderation/reports/:id` + `POST /moderation/actions` all moderator-only (403 NOT_MODERATOR), reporter identity serialized only for the queue; `tests/moderation/reports.test.js` (12 tests)
+- [x] 14.2 Shared content-visibility scope helper (used by every read query) - `src/queries/content-scope.js` (`notRemoved()`/`publicScope()`/`feedScope()`/`authorScope()`; requires authz - no cycle) applied to discover feed/mood/tag/trending/random (`discover.service` + `discover.repository` incl. `countPublicPublished`) and `stories.listByAuthor`; collections hydrate / comments / mobile BFF already gated by `canView` (audit found no unscoped public read; regression surface now centralized)
+- [x] 14.3 Progressive enforcement (warning → restriction → ban → identity_revealed w/ audit log) - `POST /moderation/actions`: warnings accumulate via atomic pipeline update (mongoose needs `{updatePipeline:true}` as 3rd `updateOne` arg) → auto-restrict at `RESTRICT_AFTER_WARNINGS=3` with `escalatedTo`; restriction → 403 ACCOUNT_RESTRICTED on poem/diary/story/comment creates via new `assertCanCreateContent` Express middleware in `authz.js` (pure-function version hung every guarded route - pinoHttp sets `req.id` so `requireUser(req)` passed and `next()` was never called); ban → loadUser 403 ACCOUNT_BANNED; restriction never downgrades a ban; `identity_revealed` demands `confirmIdentity:true` (400 IDENTITY_CONFIRMATION_REQUIRED with zero writes) then append-only ModerationAction audit row + dedicated `logger.info` event `moderation:identity_revealed` + `isAnonymizedAccount` flag; staff targets admin-only, self-action 400 CANNOT_ACTION_SELF; `tests/moderation/enforcement.test.js` (13 tests, includes audit gate)
+- [x] 14.4 Mobile report flow - `lib/api/moderation.ts` (`createReport` + 9 REPORT_REASON_OPTIONS) + report button on poem reader (shown only for signed-in non-owners) opening a reason-picker modal → POST `/reports` → toast + close; DUPLICATE_REPORT toasts + closes, connectivity → CONNECTIVITY_TOAST, other errors keep sheet open; `reportScreens.test.tsx` (6 tests); optional admin panel skipped (plan marks it optional - no Playwright this phase)
+- [x] 14.5 Cross-module test: removed content never appears in list/feed/search endpoints - `tests/moderation/removed-content.test.js`: positive controls first (feed/mood/tag/trending/random/collection-hydrate/mobile-BFF/comments/author-story-list all serve the poem), then soft-delete → all gone (random loop ×5, `countPublicPublished` 2→1, story list hides for author AND stranger), author keeps getPoem recovery (200), stranger/anonymous 404; search leg deferred - no search endpoint yet (§6), same stance as the anonymity suite
 
-**Phase 14 gate:** 14.5 green; identity_revealed has audit entry test.
+**Phase 14 gate:** 14.5 green; identity_revealed audit test green (ModerationAction row + `moderation:identity_revealed` log event asserted); server **583/583** (53 suites) + eslint 0; mobile **184/184** (18 suites) + tsc/lint 0.
 
 ---
 

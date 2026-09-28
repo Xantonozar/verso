@@ -20,6 +20,11 @@ import {
   removePoemFromCollection,
 } from '../../../lib/api/collections';
 import { getMobilePoem, MobilePoemResponse } from '../../../lib/api/engagement';
+import {
+  createReport,
+  REPORT_REASON_OPTIONS,
+  ReportReason,
+} from '../../../lib/api/moderation';
 import { toast } from '../../../lib/toast';
 import { CONNECTIVITY_TOAST, isConnectivityError } from '../../../lib/validation';
 import { colors, layout, radii, spacing, typography } from '../../../theme/tokens';
@@ -58,6 +63,10 @@ export default function PoemReaderScreen() {
   const [pickerCollections, setPickerCollections] = useState<CollectionSummary[] | null>(null);
   const [pickerError, setPickerError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState<ReportReason | null>(null);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   const fetchPoem = useCallback(async (): Promise<MobilePoemResponse> => getMobilePoem(id), [id]);
 
@@ -152,6 +161,40 @@ export default function PoemReaderScreen() {
       })
       .finally(() => {
         setTogglingId(null);
+      });
+  }
+
+  function openReport() {
+    setReportReason(null);
+    setReportOpen(true);
+  }
+
+  function closeReport() {
+    setReportOpen(false);
+    setReportReason(null);
+  }
+
+  function submitReport() {
+    if (!mobile || !reportReason || reportSubmitting) return;
+    const poemId = mobile.poem.id;
+    setReportSubmitting(true);
+    createReport({ targetType: 'poem', targetId: poemId, reason: reportReason })
+      .then(() => {
+        toast.success('Report submitted. Thanks for looking out.');
+        closeReport();
+      })
+      .catch((err: unknown) => {
+        if (isConnectivityError(err)) {
+          toast.error(CONNECTIVITY_TOAST);
+        } else if (err instanceof ApiError && err.code === 'DUPLICATE_REPORT') {
+          toast.error('You already reported this poem.');
+          closeReport();
+        } else {
+          toast.error("Couldn't submit the report. Try again.");
+        }
+      })
+      .finally(() => {
+        setReportSubmitting(false);
       });
   }
 
@@ -269,6 +312,15 @@ export default function PoemReaderScreen() {
           />
         ) : null}
 
+        {user && !isOwner ? (
+          <Button
+            label="Report poem"
+            variant="secondary"
+            onPress={openReport}
+            testID="report-poem"
+          />
+        ) : null}
+
         <View style={styles.engagement} testID="reader-engagement">
           <ReactionBar
             poemId={poem.id}
@@ -336,6 +388,42 @@ export default function PoemReaderScreen() {
               variant="secondary"
               onPress={() => setPickerOpen(false)}
               testID="picker-close"
+            />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={reportOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closeReport}
+      >
+        <View style={styles.backdrop}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>Report this poem</Text>
+            <Text style={styles.sheetHint}>Pick the reason that fits best.</Text>
+            {REPORT_REASON_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                label={option.label}
+                variant={reportReason === option.value ? 'primary' : 'secondary'}
+                onPress={() => setReportReason(option.value)}
+                testID={`report-reason-${option.value}`}
+              />
+            ))}
+            <Button
+              label={reportSubmitting ? 'Submitting…' : 'Submit report'}
+              variant="primary"
+              onPress={submitReport}
+              disabled={!reportReason || reportSubmitting}
+              testID="report-submit"
+            />
+            <Button
+              label="Cancel"
+              variant="secondary"
+              onPress={closeReport}
+              testID="report-cancel"
             />
           </View>
         </View>
@@ -428,6 +516,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: colors.ink,
     marginBottom: spacing.xs,
+  },
+  sheetHint: {
+    ...typography.body,
+    color: colors.inkMuted,
+    marginBottom: spacing.sm,
   },
   skeleton: {
     gap: spacing.md,

@@ -3,6 +3,7 @@
 const { NotFoundError, ConflictError, ValidationError } = require('../../errors');
 const { assertOwner, assertOwnerOrModerator, isModerator } = require('../../middleware/authz');
 const { logger } = require('../../config/logger');
+const { authorScope } = require('../../queries/content-scope');
 const { User } = require('../users/user.model');
 const storyRepo = require('./story.repository');
 
@@ -514,9 +515,7 @@ async function listByAuthor(authorId, requester, { cursor, limit = 20 } = {}) {
   const user = await User.findById(authorId).select('_id').lean();
   if (!user) throw new NotFoundError('User not found', { code: 'USER_NOT_FOUND' });
 
-  const isSelf = requester?.id != null && String(requester.id) === String(authorId);
-  const filter = { authorId };
-  filter.status = isSelf ? { $ne: 'removed' } : 'published';
+  const filter = { authorId, ...authorScope('story', requester, authorId) };
   if (cursor != null) filter.createdAt = { $lt: new Date(cursor) };
 
   const rows = await storyRepo.findByFilter(filter, { limit: limit + 1 });

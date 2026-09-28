@@ -3,6 +3,7 @@
 const { Poem } = require('../poems/poem.model');
 const { Follow } = require('../users/follow.model');
 const { User } = require('../users/user.model');
+const { publicScope } = require('../../queries/content-scope');
 
 /**
  * Discover repository — the only layer that queries poems/follows for
@@ -36,12 +37,12 @@ async function findAuthors(ids) {
 }
 
 async function countPublicPublished() {
-  return Poem.countDocuments({ status: 'published', visibility: 'public' });
+  return Poem.countDocuments(publicScope());
 }
 
 /** Random pick — skip over an index-ordered scan (no COLLSCAN, no $sample). */
 async function findPublicPublishedAt(skip) {
-  const rows = await Poem.find({ status: 'published', visibility: 'public' })
+  const rows = await Poem.find(publicScope())
     .select(POEM_SELECT)
     .skip(skip)
     .limit(1)
@@ -50,7 +51,7 @@ async function findPublicPublishedAt(skip) {
 }
 
 async function findTrendingTop(limit) {
-  return Poem.find({ status: 'published', visibility: 'public' })
+  return Poem.find(publicScope())
     .select(POEM_SELECT)
     .sort({ trendingScore: -1 })
     .limit(limit)
@@ -70,8 +71,7 @@ async function findTrendingCandidates(cutoff) {
   return Poem.aggregate([
     {
       $match: {
-        status: 'published',
-        visibility: 'public',
+        ...publicScope(),
         createdAt: { $gte: cutoff },
       },
     },

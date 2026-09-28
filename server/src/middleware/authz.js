@@ -57,10 +57,35 @@ function assertAdmin(user, { message = 'Administrator access required' } = {}) {
   return true;
 }
 
+/**
+ * Content-creation gate (Phase 14 step 89) — Express middleware, runs after
+ * loadUser. Restricted accounts keep read access but cannot publish; banned
+ * accounts are already rejected earlier by loadUser (belt-and-braces for
+ * optionalAuth paths). Sync throw → centralized error handler (§7.1).
+ */
+function assertCanCreateContent(req, res, next) {
+  try {
+    requireUser(req.user);
+    const status = req.user.moderation?.status;
+    if (status === 'banned') {
+      throw new ForbiddenError('This account has been suspended', { code: 'ACCOUNT_BANNED' });
+    }
+    if (status === 'restricted') {
+      throw new ForbiddenError('Your account is restricted from posting', {
+        code: 'ACCOUNT_RESTRICTED',
+      });
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   isModerator,
   requireUser,
   assertOwner,
   assertOwnerOrModerator,
   assertAdmin,
+  assertCanCreateContent,
 };

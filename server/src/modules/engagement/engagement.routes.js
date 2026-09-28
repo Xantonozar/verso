@@ -3,6 +3,7 @@
 const express = require('express');
 const { validate } = require('../../middleware/validate');
 const { requireAuth, optionalAuth, loadUser, loadUserOptional } = require('../../middleware/auth');
+const { assertCanCreateContent } = require('../../middleware/authz');
 const {
   idParamSchema,
   reactionParamsSchema,
@@ -81,7 +82,8 @@ router.delete(
 );
 
 // comments — list is optionalAuth (viewability resolved per requester)
-router.post('/comments', requireAuth, loadUser, validate({ body: createCommentSchema }), controller.createComment);
+// Restricted accounts may read but not comment (Phase 14 step 89).
+router.post('/comments', requireAuth, loadUser, assertCanCreateContent, validate({ body: createCommentSchema }), controller.createComment);
 router.get(
   '/comments',
   optionalAuth,

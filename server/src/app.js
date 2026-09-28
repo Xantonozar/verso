@@ -66,6 +66,7 @@ function createApp() {
   const { messagingRouter } = require('./modules/messaging/messaging.routes');
   const { notificationsRouter } = require('./modules/notifications/notifications.routes');
   const { analyticsRouter } = require('./modules/analytics/analytics.routes');
+  const { moderationRouter } = require('./modules/moderation/moderation.routes');
   app.use(`${API_PREFIX}/auth`, authRouter);
   app.use(`${API_PREFIX}/users`, userRouter);
   app.use(`${API_PREFIX}/poems`, poemRouter);
@@ -97,6 +98,8 @@ function createApp() {
   app.use(`${API_PREFIX}/notifications`, notificationsRouter);
   // Writer analytics dashboard (Phase 12, plan step 83): GET /analytics/writer
   app.use(`${API_PREFIX}/analytics`, analyticsRouter);
+  // Moderation (Phase 14, plan steps 87-90): /reports + /moderation/*
+  app.use(`${API_PREFIX}`, moderationRouter);
 
   // Health probe (load balancer / deploy checks)
   app.get('/health', (req, res) => {

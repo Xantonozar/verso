@@ -3,6 +3,7 @@
 const express = require('express');
 const { validate } = require('../../middleware/validate');
 const { requireAuth, optionalAuth, loadUser, loadUserOptional } = require('../../middleware/auth');
+const { assertCanCreateContent } = require('../../middleware/authz');
 const { diaryIdParamSchema, createDiarySchema } = require('./diary.schemas');
 const controller = require('./diary.controller');
 
@@ -14,7 +15,7 @@ const controller = require('./diary.controller');
  */
 const router = express.Router();
 
-router.post('/', requireAuth, loadUser, validate({ body: createDiarySchema }), controller.create);
+router.post('/', requireAuth, loadUser, assertCanCreateContent, validate({ body: createDiarySchema }), controller.create);
 router.get(
   '/:id',
   optionalAuth,
